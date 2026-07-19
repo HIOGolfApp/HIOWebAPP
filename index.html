@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HIO Golf — 你的智能高尔夫球童</title>
+<meta name="description" content="HIO Golf：GPS 果岭测距、智能记分卡、多人球局对战。覆盖全国数百家球场的真实记分卡与发球台距离数据。">
+<style>
+  :root {
+    --pine: #0b3d2e;
+    --pine-deep: #072b20;
+    --fairway: #1a7a4f;
+    --fairway-light: #2e9d6b;
+    --cream: #f7f5ef;
+    --sand: #efe9dc;
+    --gold: #c9a227;
+    --ink: #1c2420;
+    --ink-soft: #55635c;
+    --line: #e3ded2;
+    --card: #ffffff;
+    --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    line-height: 1.7;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* ---------- nav ---------- */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px clamp(20px, 5vw, 64px);
+    background: rgba(247, 245, 239, .92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; letter-spacing: .5px; color: var(--pine); }
+  .brand svg { display: block; }
+  .nav-links { display: flex; gap: clamp(16px, 3vw, 36px); font-size: 15px; color: var(--ink-soft); }
+  .nav-links a:hover { color: var(--pine); }
+  .nav-cta {
+    font-size: 14px; font-weight: 600; color: #fff !important;
+    background: var(--pine); padding: 8px 18px; border-radius: 999px;
+    transition: background .2s;
+  }
+  .nav-cta:hover { background: var(--fairway); }
+  @media (max-width: 640px) { .nav-links a:not(.nav-cta) { display: none; } }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative; overflow: hidden;
+    background: linear-gradient(160deg, var(--pine-deep) 0%, var(--pine) 55%, #0f5138 100%);
+    color: #fff;
+    padding: clamp(72px, 12vw, 140px) clamp(20px, 5vw, 64px) clamp(64px, 10vw, 120px);
+    text-align: center;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .13;
+    background-image: radial-gradient(ellipse 60% 40% at 20% 110%, #7fd6a8 0%, transparent 60%),
+                      radial-gradient(ellipse 50% 35% at 85% 105%, #4db081 0%, transparent 55%);
+  }
+  .hero h1 {
+    font-size: clamp(32px, 6vw, 58px); font-weight: 800; letter-spacing: 1px;
+    line-height: 1.25; margin-bottom: 18px;
+  }
+  .hero h1 .accent { color: #ffd766; }
+  .hero p.sub {
+    font-size: clamp(15px, 2.2vw, 19px); color: #cfe7d9; max-width: 640px; margin: 0 auto 40px;
+  }
+  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 30px; border-radius: 999px; font-size: 16px; font-weight: 600;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-gold { background: var(--gold); color: var(--pine-deep); box-shadow: 0 6px 24px rgba(201,162,39,.35); }
+  .btn-ghost { border: 1.5px solid rgba(255,255,255,.55); color: #fff; }
+  .btn-ghost:hover { border-color: #fff; background: rgba(255,255,255,.08); }
+
+  /* ---------- live stats strip ---------- */
+  .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    max-width: 880px; margin: -46px auto 0; position: relative; z-index: 2;
+    background: var(--line); border-radius: var(--radius); overflow: hidden;
+    box-shadow: 0 18px 44px rgba(11,61,46,.14);
+  }
+  .stat { background: var(--card); padding: 26px 12px; text-align: center; }
+  .stat b { display: block; font-size: clamp(26px, 4vw, 40px); font-weight: 800; color: var(--pine); font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 14px; color: var(--ink-soft); }
+  @media (max-width: 560px) { .stats { margin-left: 16px; margin-right: 16px; } .stat b { font-size: 22px; } .stat span { font-size: 12px; } }
+
+  /* ---------- sections ---------- */
+  section { padding: clamp(56px, 9vw, 110px) clamp(20px, 5vw, 64px); }
+  .section-head { text-align: center; max-width: 660px; margin: 0 auto clamp(36px, 6vw, 64px); }
+  .section-head .eyebrow { font-size: 14px; font-weight: 700; letter-spacing: 3px; color: var(--fairway); margin-bottom: 10px; }
+  .section-head h2 { font-size: clamp(24px, 4vw, 36px); font-weight: 800; color: var(--pine); margin-bottom: 14px; }
+  .section-head p { color: var(--ink-soft); font-size: 16px; }
+
+  /* ---------- features ---------- */
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px; max-width: 1100px; margin: 0 auto; }
+  .feature {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 30px 26px; transition: transform .2s, box-shadow .2s;
+  }
+  .feature:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(11,61,46,.10); }
+  .feature .icon {
+    width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(140deg, var(--fairway), var(--pine)); margin-bottom: 18px;
+  }
+  .feature h3 { font-size: 18px; font-weight: 700; color: var(--pine); margin-bottom: 8px; }
+  .feature p { font-size: 14.5px; color: var(--ink-soft); }
+
+  /* ---------- coverage ---------- */
+  #coverage { background: var(--sand); }
+  .coverage-tools {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: center;
+    max-width: 860px; margin: 0 auto 26px;
+  }
+  .coverage-tools input {
+    flex: 1 1 260px; padding: 12px 18px; font-size: 15px; border: 1.5px solid var(--line);
+    border-radius: 999px; background: #fff; outline: none; font-family: inherit;
+  }
+  .coverage-tools input:focus { border-color: var(--fairway); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 900px; margin: 0 auto 30px; }
+  .chip {
+    font-size: 13.5px; padding: 6px 15px; border-radius: 999px; cursor: pointer; user-select: none;
+    background: #fff; border: 1px solid var(--line); color: var(--ink-soft); transition: all .15s;
+  }
+  .chip:hover { border-color: var(--fairway); color: var(--fairway); }
+  .chip.on { background: var(--pine); border-color: var(--pine); color: #fff; }
+  .course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; max-width: 1160px; margin: 0 auto; }
+  .course {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .course .name { font-weight: 700; font-size: 15.5px; color: var(--ink); line-height: 1.45; }
+  .course .meta { font-size: 13px; color: var(--ink-soft); }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+  .badge.gps { background: #e8f6ee; color: #157347; }
+  .badge.tee { background: #f3eddd; color: #8a6d13; }
+  .badge.holes { background: #edf1ef; color: var(--ink-soft); font-weight: 500; }
+  .coverage-note { text-align: center; font-size: 13.5px; color: var(--ink-soft); margin-top: 26px; }
+  .coverage-state { text-align: center; color: var(--ink-soft); padding: 40px 0; font-size: 15px; }
+  .show-more { display: block; margin: 30px auto 0; padding: 11px 34px; font-size: 15px; font-weight: 600;
+    color: var(--pine); background: #fff; border: 1.5px solid var(--pine); border-radius: 999px; cursor: pointer; font-family: inherit; }
+  .show-more:hover { background: var(--pine); color: #fff; }
+
+  /* ---------- download ---------- */
+  #download { text-align: center; }
+  .tf-badge {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: var(--pine); color: #fff; padding: 16px 34px; border-radius: 16px;
+    font-size: 17px; font-weight: 600; transition: background .2s, transform .15s;
+  }
+  .tf-badge:hover { background: var(--fairway); transform: translateY(-2px); }
+  .dl-hint { margin-top: 16px; font-size: 13.5px; color: var(--ink-soft); }
+
+  /* ---------- footer ---------- */
+  footer {
+    background: var(--pine-deep); color: #9dbcab; text-align: center;
+    padding: 36px 20px; font-size: 13.5px; line-height: 2;
+  }
+  footer a { color: #c4d9cc; }
+  footer a:hover { color: #fff; }
+
+  /* entrance animation */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="brand" href="#top">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="13" cy="13" r="12" fill="#0b3d2e"/>
+      <path d="M10 20V6l8 3.2-8 3.2" stroke="#ffd766" stroke-width="1.8" stroke-linejoin="round" fill="#ffd766"/>
+      <ellipse cx="13" cy="20.4" rx="6" ry="1.6" fill="#1a7a4f"/>
+    </svg>
+    HIO Golf
+  </a>
+  <div class="nav-links">
+    <a href="#features">功能</a>
+    <a href="#coverage">球场覆盖</a>
+    <a class="nav-cta" href="#download">下载 App</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <h1>每一杆，都算数<br><span class="accent">你的智能高尔夫球童</span></h1>
+  <p class="sub">GPS 果岭测距 · 智能记分卡 · 多人球局对战 · 好友动态。基于全国球场的真实记分卡与发球台距离数据，把职业级的场上信息装进口袋。</p>
+  <div class="hero-ctas">
+    <a class="btn btn-gold" href="#download">TestFlight 抢先体验</a>
+    <a class="btn btn-ghost" href="#coverage">查看球场覆盖 ↓</a>
+  </div>
+</header>
+
+<div class="stats" id="stats">
+  <div class="stat"><b id="stat-total">—</b><span>覆盖球场</span></div>
+  <div class="stat"><b id="stat-tee">—</b><span>Tee 台距离数据球场</span></div>
+  <div class="stat"><b id="stat-gps">—</b><span>GPS 果岭测距球场</span></div>
+</div>
+
+<section id="features">
+  <div class="section-head reveal">
+    <div class="eyebrow">FEATURES</div>
+    <h2>下场该有的，这里都有</h2>
+    <p>从开球到复盘，HIO 陪你打完每一洞。</p>
+  </div>
+  <div class="features">
+    <div class="feature reveal">
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.4-8 12-8 12S4 15.4 4 10a8 8 0 0 1 8-8z"/></svg></div>
+      <h3>GPS 果岭测距</h3>
+      <p>实测果岭前沿 / 中点 / 后缘距离，逐洞地图导航。测绘覆盖持续扩展中。</p>
+    </div>
+    <div class="feature reveal">
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+      <h3>智能记分卡</h3>
+      <p>杆数、推杆、上球道、GIR 一键录入，完赛自动生成数据总结与分享卡片。</p>
+    </div>
+    <div class="feature reveal">
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 15.4c2.6.3 5 2 5 4.6"/></svg></div>
+      <h3>多人球局对战</h3>
+      <p>邀请好友同组开球，实时排行榜与四人四球比洞赛，中途也能随时组局。</p>
+    </div>
+    <div class="feature reveal">
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6a5 5 0 0 0-8.8-3.2A5 5 0 0 0 3.2 8.6c0 5 8.8 10.4 8.8 10.4s8.8-5.4 8.8-10.4z"/></svg></div>
+      <h3>好友动态圈</h3>
+      <p>完赛动态、逐洞成绩、配文与照片，只对好友可见的高尔夫朋友圈。</p>
+    </div>
+  </div>
+</section>
+
+<section id="coverage">
+  <div class="section-head reveal">
+    <div class="eyebrow">COURSES</div>
+    <h2>球场覆盖</h2>
+    <p>以下数据与 App 实时一致：带「Tee 台距离」的球场提供逐洞逐 Tee 的真实码数；带「GPS」的球场支持果岭测距与逐洞地图。</p>
+  </div>
+  <div class="coverage-tools">
+    <input id="course-search" type="search" placeholder="搜索球场名 / 城市…" aria-label="搜索球场">
+  </div>
+  <div class="chips" id="province-chips"></div>
+  <div class="coverage-state" id="coverage-state">正在加载球场数据…</div>
+  <div class="course-grid" id="course-grid"></div>
+  <button class="show-more" id="show-more" style="display:none">展开全部</button>
+  <p class="coverage-note">球场目录持续清洗与扩充中；如你常打的球场尚未收录或数据有误，欢迎在 App 内一键反馈。</p>
+</section>
+
+<section id="download">
+  <div class="section-head reveal">
+    <div class="eyebrow">DOWNLOAD</div>
+    <h2>现在加入抢先体验</h2>
+    <p>HIO Golf 正在 TestFlight 公测，iOS 16 及以上可用。</p>
+  </div>
+  <!-- TODO: 替换为真实 TestFlight 公开邀请链接 -->
+  <a class="tf-badge reveal" id="tf-link" href="TESTFLIGHT_URL_PLACEHOLDER" target="_blank" rel="noopener">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
+    通过 TestFlight 下载
+  </a>
+  <p class="dl-hint">需先安装 Apple 官方 TestFlight 应用，再打开邀请链接。</p>
+</section>
+
+<footer>
+  <div>© 2026 HIO Golf · hiogolf.cn</div>
+  <!-- TODO: 替换为真实备案号 -->
+  <div><a href="https://beian.miit.gov.cn" target="_blank" rel="noopener">ICP_PLACEHOLDER</a></div>
+</footer>
+
+<script>
+(function () {
+  // entrance animation
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+
+  // live coverage data (same-origin proxy -> backend /api/v1/public/course-coverage)
+  var state = { courses: [], filtered: [], province: '全部', keyword: '', expanded: false };
+  var PAGE = 60;
+  var grid = document.getElementById('course-grid');
+  var stateEl = document.getElementById('coverage-state');
+  var moreBtn = document.getElementById('show-more');
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+  function render() {
+    var kw = state.keyword.trim();
+    state.filtered = state.courses.filter(function (c) {
+      if (state.province !== '全部' && c.province !== state.province) return false;
+      if (kw && (c.name || '').indexOf(kw) < 0 && (c.city || '').indexOf(kw) < 0) return false;
+      return true;
+    });
+    var shown = state.expanded ? state.filtered : state.filtered.slice(0, PAGE);
+    grid.innerHTML = shown.map(function (c) {
+      var badges = '';
+      if (c.gpsMapped) badges += '<span class="badge gps">GPS 测距</span>';
+      if (c.teesWithDistances > 0) badges += '<span class="badge tee">' + c.teesWithDistances + ' 个 Tee 台距离</span>';
+      badges += '<span class="badge holes">' + (c.holeCount || 18) + ' 洞</span>';
+      return '<div class="course"><div class="name">' + esc(c.name) + '</div>' +
+             '<div class="meta">' + esc(c.province) + (c.city && c.city !== c.province ? ' · ' + esc(c.city) : '') + '</div>' +
+             '<div class="badges">' + badges + '</div></div>';
+    }).join('');
+    stateEl.style.display = state.filtered.length ? 'none' : '';
+    stateEl.textContent = state.filtered.length ? '' : '没有匹配的球场';
+    moreBtn.style.display = (!state.expanded && state.filtered.length > PAGE) ? '' : 'none';
+    moreBtn.textContent = '展开全部 ' + state.filtered.length + ' 家';
+  }
+
+  function buildChips(provinces) {
+    var wrap = document.getElementById('province-chips');
+    wrap.innerHTML = provinces.map(function (p) {
+      return '<span class="chip' + (p.name === '全部' ? ' on' : '') + '" data-p="' + esc(p.name) + '">' +
+             esc(p.name) + (p.n ? ' ' + p.n : '') + '</span>';
+    }).join('');
+    wrap.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) return;
+      wrap.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('on'); });
+      chip.classList.add('on');
+      state.province = chip.getAttribute('data-p');
+      state.expanded = false;
+      render();
+    });
+  }
+
+  function animateNumber(el, target) {
+    var start = null, from = 0;
+    function step(ts) {
+      if (!start) start = ts;
+      var t = Math.min((ts - start) / 900, 1);
+      el.textContent = Math.round(from + (target - from) * (1 - Math.pow(1 - t, 3)));
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  fetch('/public-api/v1/public/course-coverage')
+    .then(function (r) { return r.json(); })
+    .then(function (body) {
+      var data = body && body.data;
+      if (!data || !data.courses) throw new Error('bad payload');
+      state.courses = data.courses;
+      animateNumber(document.getElementById('stat-total'), data.totalCourses);
+      animateNumber(document.getElementById('stat-tee'), data.teeDataCourses);
+      animateNumber(document.getElementById('stat-gps'), data.gpsCourses);
+      var byProvince = {};
+      state.courses.forEach(function (c) { byProvince[c.province] = (byProvince[c.province] || 0) + 1; });
+      var provinces = Object.keys(byProvince).sort(function (a, b) { return byProvince[b] - byProvince[a]; })
+        .map(function (p) { return { name: p, n: byProvince[p] }; });
+      provinces.unshift({ name: '全部', n: state.courses.length });
+      buildChips(provinces);
+      render();
+    })
+    .catch(function () {
+      stateEl.textContent = '球场数据加载失败，请稍后刷新重试。';
+      ['stat-total', 'stat-tee', 'stat-gps'].forEach(function (id) {
+        document.getElementById(id).textContent = '—';
+      });
+    });
+
+  document.getElementById('course-search').addEventListener('input', function (e) {
+    state.keyword = e.target.value;
+    state.expanded = false;
+    render();
+  });
+  moreBtn.addEventListener('click', function () { state.expanded = true; render(); });
+})();
+</script>
+</body>
+</html>
