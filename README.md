@@ -15,7 +15,7 @@
 首次：
 
 ```bash
-git clone git@github.com:HIOGolfApp/HIO-website.git /opt/hio-website
+git clone https://github.com/HIOGolfApp/HIOWebAPP.git /opt/hio-website
 cp /opt/hio-website/nginx/hiogolf-site.conf /etc/nginx/conf.d/hiogolf-site.conf
 rm -f /etc/nginx/conf.d/aigolf-root.conf   # 旧的根域名 API 反代，被本站取代
 nginx -t && systemctl reload nginx
@@ -26,11 +26,6 @@ nginx -t && systemctl reload nginx
 ```bash
 cd /opt/hio-website && git pull
 ```
-
-## 待填占位符（index.html）
-
-- `TESTFLIGHT_URL_PLACEHOLDER` — TestFlight 公开邀请链接
-- `ICP_PLACEHOLDER` — ICP 备案号（页脚，法定要求，链接指向 beian.miit.gov.cn）
 
 ## 注意
 
