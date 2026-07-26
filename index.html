@@ -54,204 +54,221 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<meta name="theme-color" content="#0b3d2e">
+<meta name="theme-color" content="#ffffff">
 <style>
+  /* 与 iOS App 同一套设计语言:白底、黑主色、systemGray6 卡片、
+     BrandGreen #086410 / ScoreRed #B3261E 点缀,圆角 12/8,无阴影 */
   :root {
-    --pine: #0b3d2e;
-    --pine-deep: #072b20;
-    --fairway: #1a7a4f;
-    --fairway-light: #2e9d6b;
-    --cream: #f7f5ef;
-    --sand: #efe9dc;
-    --gold: #c9a227;
-    --ink: #1c2420;
-    --ink-soft: #55635c;
-    --line: #e3ded2;
-    --card: #ffffff;
-    --radius: 14px;
+    --ink: #111111;
+    --sub: #6e6e73;
+    --tertiary: #aeaeb2;
+    --fill: #f2f2f7;
+    --line: #e5e5ea;
+    --green: #086410;
+    --green-tint: #e7f0e8;
+    --red: #b3261e;
+    --r-card: 12px;
+    --r-btn: 8px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
-    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
     color: var(--ink);
-    background: var(--cream);
+    background: #fff;
     line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
   }
   a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 32px); }
 
   /* ---------- nav ---------- */
   .nav {
     position: sticky; top: 0; z-index: 50;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px clamp(20px, 5vw, 64px);
-    background: rgba(247, 245, 239, .92);
-    backdrop-filter: blur(10px);
+    background: rgba(255,255,255,.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--line);
   }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; letter-spacing: .5px; color: var(--pine); }
+  .nav-inner {
+    max-width: 1080px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px clamp(20px, 4vw, 32px);
+  }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; color: var(--ink); }
   .brand svg { display: block; }
-  .nav-links { display: flex; gap: clamp(16px, 3vw, 36px); font-size: 15px; color: var(--ink-soft); }
-  .nav-links a:hover { color: var(--pine); }
+  .nav-links { display: flex; align-items: center; gap: clamp(18px, 3vw, 32px); font-size: 15px; color: var(--sub); }
+  .nav-links a:hover { color: var(--ink); }
   .nav-cta {
     font-size: 14px; font-weight: 600; color: #fff !important;
-    background: var(--pine); padding: 8px 18px; border-radius: 999px;
-    transition: background .2s;
+    background: var(--ink); padding: 8px 16px; border-radius: var(--r-btn);
+    transition: opacity .15s;
   }
-  .nav-cta:hover { background: var(--fairway); }
+  .nav-cta:hover { opacity: .82; }
   @media (max-width: 640px) { .nav-links a:not(.nav-cta) { display: none; } }
 
   /* ---------- hero ---------- */
-  .hero {
-    position: relative; overflow: hidden;
-    background: linear-gradient(160deg, var(--pine-deep) 0%, var(--pine) 55%, #0f5138 100%);
-    color: #fff;
-    padding: clamp(72px, 12vw, 140px) clamp(20px, 5vw, 64px) clamp(64px, 10vw, 120px);
-    text-align: center;
+  .hero { text-align: center; padding: clamp(64px, 10vw, 120px) 0 clamp(40px, 6vw, 64px); }
+  .hero .lockup {
+    display: inline-flex; align-items: flex-end; gap: 10px; margin-bottom: clamp(28px, 5vw, 44px);
   }
-  .hero::before {
-    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .13;
-    background-image: radial-gradient(ellipse 60% 40% at 20% 110%, #7fd6a8 0%, transparent 60%),
-                      radial-gradient(ellipse 50% 35% at 85% 105%, #4db081 0%, transparent 55%);
+  .hero .lockup .golf {
+    font-size: clamp(40px, 7vw, 64px); font-weight: 800; letter-spacing: -1px; line-height: .9;
   }
   .hero h1 {
-    font-size: clamp(32px, 6vw, 58px); font-weight: 800; letter-spacing: 1px;
-    line-height: 1.25; margin-bottom: 18px;
+    font-size: clamp(30px, 5.5vw, 52px); font-weight: 800; letter-spacing: .5px;
+    line-height: 1.3; margin-bottom: 16px;
   }
-  .hero h1 .accent { color: #ffd766; }
   .hero p.sub {
-    font-size: clamp(15px, 2.2vw, 19px); color: #cfe7d9; max-width: 640px; margin: 0 auto 40px;
+    font-size: clamp(15px, 2vw, 18px); color: var(--sub); max-width: 620px; margin: 0 auto 36px;
   }
-  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
   .btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 13px 30px; border-radius: 999px; font-size: 16px; font-weight: 600;
-    transition: transform .15s, box-shadow .15s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 28px; border-radius: var(--r-btn); font-size: 16px; font-weight: 600;
+    transition: opacity .15s, background .15s;
   }
-  .btn:hover { transform: translateY(-2px); }
-  .btn-gold { background: var(--gold); color: var(--pine-deep); box-shadow: 0 6px 24px rgba(201,162,39,.35); }
-  .btn-ghost { border: 1.5px solid rgba(255,255,255,.55); color: #fff; }
-  .btn-ghost:hover { border-color: #fff; background: rgba(255,255,255,.08); }
+  .btn-primary { background: var(--ink); color: #fff; }
+  .btn-primary:hover { opacity: .82; }
+  .btn-secondary { background: var(--fill); color: var(--ink); }
+  .btn-secondary:hover { background: var(--line); }
 
-  /* ---------- live stats strip ---------- */
+  /* ---------- live stats ---------- */
   .stats {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
-    max-width: 880px; margin: -46px auto 0; position: relative; z-index: 2;
-    background: var(--line); border-radius: var(--radius); overflow: hidden;
-    box-shadow: 0 18px 44px rgba(11,61,46,.14);
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    max-width: 880px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 32px);
   }
-  .stat { background: var(--card); padding: 26px 12px; text-align: center; }
-  .stat b { display: block; font-size: clamp(26px, 4vw, 40px); font-weight: 800; color: var(--pine); font-variant-numeric: tabular-nums; }
-  .stat span { font-size: 14px; color: var(--ink-soft); }
-  @media (max-width: 560px) { .stats { margin-left: 16px; margin-right: 16px; } .stat b { font-size: 22px; } .stat span { font-size: 12px; } }
+  .stat { background: var(--fill); border-radius: var(--r-card); padding: 24px 12px; text-align: center; }
+  .stat b {
+    display: block; font-size: clamp(26px, 4vw, 38px); font-weight: 800;
+    font-variant-numeric: tabular-nums; line-height: 1.3;
+  }
+  .stat span { font-size: 13.5px; color: var(--sub); }
+  @media (max-width: 560px) { .stat b { font-size: 24px; } .stat span { font-size: 12px; } }
 
   /* ---------- sections ---------- */
-  section { padding: clamp(56px, 9vw, 110px) clamp(20px, 5vw, 64px); }
-  .section-head { text-align: center; max-width: 660px; margin: 0 auto clamp(36px, 6vw, 64px); }
-  .section-head .eyebrow { font-size: 14px; font-weight: 700; letter-spacing: 3px; color: var(--fairway); margin-bottom: 10px; }
-  .section-head h2 { font-size: clamp(24px, 4vw, 36px); font-weight: 800; color: var(--pine); margin-bottom: 14px; }
-  .section-head p { color: var(--ink-soft); font-size: 16px; }
+  section { padding: clamp(56px, 9vw, 104px) 0; }
+  .section-head { text-align: center; max-width: 640px; margin: 0 auto clamp(32px, 5vw, 56px); padding: 0 20px; }
+  .section-head .eyebrow {
+    font-size: 13px; font-weight: 700; letter-spacing: 3px; color: var(--green); margin-bottom: 10px;
+  }
+  .section-head h2 { font-size: clamp(24px, 4vw, 34px); font-weight: 800; margin-bottom: 12px; }
+  .section-head p { color: var(--sub); font-size: 15.5px; }
 
   /* ---------- features ---------- */
-  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px; max-width: 1100px; margin: 0 auto; }
-  .feature {
-    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 30px 26px; transition: transform .2s, box-shadow .2s;
+  .features {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+    max-width: 1080px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 32px);
   }
-  .feature:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(11,61,46,.10); }
-  .feature .icon {
-    width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(140deg, var(--fairway), var(--pine)); margin-bottom: 18px;
-  }
-  .feature h3 { font-size: 18px; font-weight: 700; color: var(--pine); margin-bottom: 8px; }
-  .feature p { font-size: 14.5px; color: var(--ink-soft); }
+  .feature { background: var(--fill); border-radius: var(--r-card); padding: 28px 24px; }
+  .feature .icon { margin-bottom: 16px; }
+  .feature .icon svg { display: block; }
+  .feature h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .feature p { font-size: 14px; color: var(--sub); }
 
   /* ---------- coverage ---------- */
-  #coverage { background: var(--sand); }
+  #coverage { border-top: 1px solid var(--line); }
   .coverage-tools {
-    display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: center;
-    max-width: 860px; margin: 0 auto 26px;
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: center;
+    max-width: 860px; margin: 0 auto 22px; padding: 0 20px;
   }
   .coverage-tools input {
-    flex: 1 1 260px; padding: 12px 18px; font-size: 15px; border: 1.5px solid var(--line);
-    border-radius: 999px; background: #fff; outline: none; font-family: inherit;
+    flex: 1 1 260px; padding: 12px 16px; font-size: 15px; border: none;
+    border-radius: var(--r-btn); background: var(--fill); outline: none; font-family: inherit;
+    color: var(--ink);
   }
-  .coverage-tools input:focus { border-color: var(--fairway); }
-  .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 900px; margin: 0 auto 30px; }
+  .coverage-tools input::placeholder { color: var(--tertiary); }
+  .coverage-tools input:focus { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .chips {
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    max-width: 900px; margin: 0 auto 28px; padding: 0 20px;
+  }
   .chip {
-    font-size: 13.5px; padding: 6px 15px; border-radius: 999px; cursor: pointer; user-select: none;
-    background: #fff; border: 1px solid var(--line); color: var(--ink-soft); transition: all .15s;
+    font-size: 13.5px; padding: 7px 14px; border-radius: var(--r-btn); cursor: pointer; user-select: none;
+    background: var(--fill); color: var(--sub); transition: all .15s;
   }
-  .chip:hover { border-color: var(--fairway); color: var(--fairway); }
-  .chip.on { background: var(--pine); border-color: var(--pine); color: #fff; }
-  .chip.gps-toggle { font-size: 14px; padding: 10px 20px; border-width: 1.5px; }
-  .chip.gps-toggle.on { background: #157347; border-color: #157347; color: #fff; }
-  .course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; max-width: 1160px; margin: 0 auto; }
+  .chip:hover { color: var(--ink); }
+  .chip.on { background: var(--ink); color: #fff; }
+  .chip.gps-toggle { font-size: 14px; padding: 10px 18px; }
+  .chip.gps-toggle.on { background: var(--green); color: #fff; }
+  .course-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px;
+    max-width: 1080px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 32px);
+  }
   .course {
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-    padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+    background: var(--fill); border-radius: var(--r-card);
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 7px;
   }
-  .course .name { font-weight: 700; font-size: 15.5px; color: var(--ink); line-height: 1.45; }
-  .course .meta { font-size: 13px; color: var(--ink-soft); }
+  .course .name { font-weight: 700; font-size: 15px; line-height: 1.45; }
+  .course .meta { font-size: 13px; color: var(--sub); }
   .badges { display: flex; gap: 6px; flex-wrap: wrap; }
-  .badge { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
-  .badge.gps { background: #e8f6ee; color: #157347; }
-  .badge.tee { background: #f3eddd; color: #8a6d13; }
-  .badge.holes { background: #edf1ef; color: var(--ink-soft); font-weight: 500; }
-  .coverage-note { text-align: center; font-size: 13.5px; color: var(--ink-soft); margin-top: 26px; }
-  .coverage-state { text-align: center; color: var(--ink-soft); padding: 40px 0; font-size: 15px; }
-  .show-more { display: block; margin: 30px auto 0; padding: 11px 34px; font-size: 15px; font-weight: 600;
-    color: var(--pine); background: #fff; border: 1.5px solid var(--pine); border-radius: 999px; cursor: pointer; font-family: inherit; }
-  .show-more:hover { background: var(--pine); color: #fff; }
-
-  /* ---------- download ---------- */
-  #download { text-align: center; }
-  .tf-badge {
-    display: inline-flex; align-items: center; gap: 12px;
-    background: var(--pine); color: #fff; padding: 16px 34px; border-radius: 16px;
-    font-size: 17px; font-weight: 600; transition: background .2s, transform .15s;
+  .badge { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 6px; }
+  .badge.gps { background: var(--green-tint); color: var(--green); }
+  .badge.tee { background: #fff; color: var(--sub); }
+  .badge.holes { background: #fff; color: var(--tertiary); font-weight: 500; }
+  .coverage-note { text-align: center; font-size: 13px; color: var(--tertiary); margin-top: 24px; padding: 0 20px; }
+  .coverage-state { text-align: center; color: var(--sub); padding: 40px 0; font-size: 15px; }
+  .show-more {
+    display: block; margin: 28px auto 0; padding: 12px 32px; font-size: 15px; font-weight: 600;
+    color: var(--ink); background: var(--fill); border: none; border-radius: var(--r-btn);
+    cursor: pointer; font-family: inherit; transition: background .15s;
   }
-  .tf-badge:hover { background: var(--fairway); transform: translateY(-2px); }
-  .dl-hint { margin-top: 16px; font-size: 13.5px; color: var(--ink-soft); }
+  .show-more:hover { background: var(--line); }
+
+  /* ---------- download / contact ---------- */
+  #download { text-align: center; border-top: 1px solid var(--line); }
+  #contact { text-align: center; border-top: 1px solid var(--line); }
+  .dl-hint { margin-top: 14px; font-size: 13px; color: var(--tertiary); }
 
   /* ---------- footer ---------- */
   footer {
-    background: var(--pine-deep); color: #9dbcab; text-align: center;
-    padding: 36px 20px; font-size: 13.5px; line-height: 2;
+    border-top: 1px solid var(--line); color: var(--sub); text-align: center;
+    padding: 32px 20px 40px; font-size: 13px; line-height: 2.1;
   }
-  footer a { color: #c4d9cc; }
-  footer a:hover { color: #fff; }
+  footer a:hover { color: var(--ink); }
 
   /* entrance animation */
-  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
   .reveal.in { opacity: 1; transform: none; }
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a class="brand" href="#top">
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="13" cy="13" r="12" fill="#0b3d2e"/>
-      <path d="M10 20V6l8 3.2-8 3.2" stroke="#ffd766" stroke-width="1.8" stroke-linejoin="round" fill="#ffd766"/>
-      <ellipse cx="13" cy="20.4" rx="6" ry="1.6" fill="#1a7a4f"/>
-    </svg>
-    一杆高尔夫
-  </a>
-  <div class="nav-links">
-    <a href="#features">功能</a>
-    <a href="#coverage">球场覆盖</a>
-    <a href="#contact">联系我们</a>
-    <a class="nav-cta" href="#download">下载 App</a>
+  <div class="nav-inner">
+    <a class="brand" href="#top">
+      <svg width="15" height="26" viewBox="0 0 31.7613 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <ellipse cx="15.8806" cy="51.8209" rx="15.8806" ry="4.1791" fill="#111"/>
+        <path d="M11.7 4.83433C11.7 4.64968 11.8497 4.5 12.0343 4.5H19.7657C19.9503 4.5 20.1 4.64968 20.1 4.83433V49H11.7V4.83433Z" fill="#111"/>
+        <path d="M16.3758 7.79297C16.207 8.44227 15.9892 9.07951 15.7215 9.69824C15.0113 11.3393 13.9722 12.8179 12.6687 14.042C11.3653 15.266 9.82471 16.2098 8.14238 16.8154C7.50783 17.0439 6.85788 17.2209 6.19902 17.3486L6.31523 15.5127C6.72993 15.4145 7.14013 15.2953 7.54277 15.1504C8.9978 14.6265 10.3305 13.8106 11.4578 12.752C12.585 11.6934 13.4833 10.4152 14.0975 8.99609C14.2674 8.60329 14.4119 8.20075 14.5359 7.79297H16.3758Z" stroke="#CB0018" stroke-width="6.58576"/>
+        <circle cx="9.44478" cy="48.4776" r="4.1791" fill="#EAEAEA"/>
+      </svg>
+      一杆高尔夫
+    </a>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#coverage">球场覆盖</a>
+      <a href="#contact">联系我们</a>
+      <a class="nav-cta" href="#download">下载 App</a>
+    </div>
   </div>
 </nav>
 
-<header class="hero" id="top">
-  <h1>每一杆，都算数<br><span class="accent">你的智能高尔夫球童</span></h1>
+<header class="hero wrap" id="top">
+  <div class="lockup" aria-label="1 Golf">
+    <svg width="36" height="64" viewBox="0 0 31.7613 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <ellipse cx="15.8806" cy="51.8209" rx="15.8806" ry="4.1791" fill="#111"/>
+      <path d="M11.7 4.83433C11.7 4.64968 11.8497 4.5 12.0343 4.5H19.7657C19.9503 4.5 20.1 4.64968 20.1 4.83433V49H11.7V4.83433Z" fill="#111"/>
+      <path d="M16.3758 7.79297C16.207 8.44227 15.9892 9.07951 15.7215 9.69824C15.0113 11.3393 13.9722 12.8179 12.6687 14.042C11.3653 15.266 9.82471 16.2098 8.14238 16.8154C7.50783 17.0439 6.85788 17.2209 6.19902 17.3486L6.31523 15.5127C6.72993 15.4145 7.14013 15.2953 7.54277 15.1504C8.9978 14.6265 10.3305 13.8106 11.4578 12.752C12.585 11.6934 13.4833 10.4152 14.0975 8.99609C14.2674 8.60329 14.4119 8.20075 14.5359 7.79297H16.3758Z" stroke="#CB0018" stroke-width="6.58576"/>
+      <circle cx="9.44478" cy="48.4776" r="4.1791" fill="#EAEAEA"/>
+    </svg>
+    <span class="golf">Golf</span>
+  </div>
+  <h1>每一杆，都算数</h1>
   <p class="sub">GPS 果岭测距 · 智能记分卡 · 多人球局对战 · 好友动态。基于全国球场的真实记分卡与发球台距离数据，把职业级的场上信息装进口袋。</p>
   <div class="hero-ctas">
-    <a class="btn btn-gold" href="#download">TestFlight 抢先体验</a>
-    <a class="btn btn-ghost" href="#coverage">查看球场覆盖 ↓</a>
+    <a class="btn btn-primary" href="#download">TestFlight 抢先体验</a>
+    <a class="btn btn-secondary" href="#coverage">查看球场覆盖</a>
   </div>
 </header>
 
@@ -269,22 +286,22 @@
   </div>
   <div class="features">
     <div class="feature reveal">
-      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.4-8 12-8 12S4 15.4 4 10a8 8 0 0 1 8-8z"/></svg></div>
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.4-8 12-8 12S4 15.4 4 10a8 8 0 0 1 8-8z"/></svg></div>
       <h3>GPS 果岭测距</h3>
       <p>实测果岭前沿 / 中点 / 后缘距离，逐洞地图导航。测绘覆盖持续扩展中。</p>
     </div>
     <div class="feature reveal">
-      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
       <h3>智能记分卡</h3>
       <p>杆数、推杆、上球道、GIR 一键录入，完赛自动生成数据总结与分享卡片。</p>
     </div>
     <div class="feature reveal">
-      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 15.4c2.6.3 5 2 5 4.6"/></svg></div>
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 15.4c2.6.3 5 2 5 4.6"/></svg></div>
       <h3>多人球局对战</h3>
-      <p>邀请好友同组开球，实时排行榜与四人四球比洞赛，中途也能随时组局。</p>
+      <p>邀请好友同组开球，实时排行榜、比洞赛、拿骚与 8421，中途也能随时组局。</p>
     </div>
     <div class="feature reveal">
-      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6a5 5 0 0 0-8.8-3.2A5 5 0 0 0 3.2 8.6c0 5 8.8 10.4 8.8 10.4s8.8-5.4 8.8-10.4z"/></svg></div>
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6a5 5 0 0 0-8.8-3.2A5 5 0 0 0 3.2 8.6c0 5 8.8 10.4 8.8 10.4s8.8-5.4 8.8-10.4z"/></svg></div>
       <h3>好友动态圈</h3>
       <p>完赛动态、逐洞成绩、配文与照片，只对好友可见的高尔夫朋友圈。</p>
     </div>
@@ -299,7 +316,7 @@
   </div>
   <div class="coverage-tools">
     <input id="course-search" type="search" placeholder="搜索球场名 / 城市…" aria-label="搜索球场">
-    <span class="chip gps-toggle" id="gps-toggle" role="switch" aria-checked="false">⛳ 仅看支持 GPS 的球场</span>
+    <span class="chip gps-toggle" id="gps-toggle" role="switch" aria-checked="false">仅看支持 GPS 的球场</span>
   </div>
   <div class="chips" id="province-chips"></div>
   <div class="coverage-state" id="coverage-state">正在加载球场数据…</div>
@@ -314,26 +331,24 @@
     <h2>现在加入抢先体验</h2>
     <p>一杆高尔夫正在 TestFlight 公测，iOS 16 及以上可用。</p>
   </div>
-  <a class="tf-badge reveal" id="tf-link" href="https://testflight.apple.com/join/xvQ29RTN" target="_blank" rel="noopener">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
+  <a class="btn btn-primary reveal" id="tf-link" href="https://testflight.apple.com/join/xvQ29RTN" target="_blank" rel="noopener">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
     通过 TestFlight 下载
   </a>
   <p class="dl-hint">需先安装 Apple 官方 TestFlight 应用，再打开邀请链接。</p>
 </section>
 
-<section id="contact" style="background: var(--sand);">
-  <div class="section-head reveal" style="margin-bottom: 28px;">
+<section id="contact">
+  <div class="section-head reveal" style="margin-bottom: 24px;">
     <div class="eyebrow">CONTACT</div>
     <h2>联系我们</h2>
     <p>合作洽谈、球场数据纠错、使用问题，欢迎来信。</p>
   </div>
-  <div style="text-align: center;" class="reveal">
-    <a class="tf-badge" href="mailto:contact@hiogolf.cn" style="background: var(--card); color: var(--pine); border: 1.5px solid var(--line);">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
-      contact@hiogolf.cn
-    </a>
-    <p class="dl-hint">我们通常会在 1-2 个工作日内回复。</p>
-  </div>
+  <a class="btn btn-secondary reveal" href="mailto:contact@hiogolf.cn">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+    contact@hiogolf.cn
+  </a>
+  <p class="dl-hint">我们通常会在 1-2 个工作日内回复。</p>
 </section>
 
 <footer>
