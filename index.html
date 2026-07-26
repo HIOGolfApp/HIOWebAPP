@@ -110,10 +110,13 @@
   /* ---------- hero ---------- */
   .hero { text-align: center; padding: clamp(64px, 10vw, 120px) 0 clamp(40px, 6vw, 64px); }
   .hero .lockup {
-    display: inline-flex; align-items: flex-end; gap: 10px; margin-bottom: clamp(28px, 5vw, 44px);
+    display: inline-flex; align-items: center; gap: 8px; margin-bottom: clamp(28px, 5vw, 44px);
   }
+  .hero .lockup svg { height: clamp(42px, 6.5vw, 56px); width: auto; }
   .hero .lockup .golf {
-    font-size: clamp(40px, 7vw, 64px); font-weight: 800; letter-spacing: -1px; line-height: .9;
+    /* 与 App 开屏一致:SF 系统黑体(非苹果设备回落 Helvetica) */
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: clamp(40px, 6.2vw, 53px); font-weight: 900; line-height: 1;
   }
   .hero h1 {
     font-size: clamp(30px, 5.5vw, 52px); font-weight: 800; letter-spacing: .5px;
