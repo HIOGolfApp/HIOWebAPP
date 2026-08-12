@@ -2,7 +2,7 @@
 
 **线上地址：[hiogolf.cn](https://hiogolf.cn)** · [www.hiogolf.cn](https://www.hiogolf.cn)
 
-[HIO Golf](https://testflight.apple.com/join/xvQ29RTN) 是一款面向国内球友的智能高尔夫 iOS App：
+[HIO Golf](https://apps.apple.com/cn/app/id6789452083) 是一款面向国内球友的智能高尔夫 iOS App：
 
 - ⛳ **GPS 果岭测距** — 实测果岭前沿 / 中点 / 后缘距离，逐洞地图导航
 - 📋 **智能记分卡** — 杆数、推杆、上球道、GIR 一键录入，完赛自动生成数据总结与分享卡片
