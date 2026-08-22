@@ -185,7 +185,7 @@
 <h3>2.4 Device and log data</h3>
 <ul>
   <li><strong>Push token:</strong> if you allow notifications, we store the Apple-issued device token and its environment so we can deliver friend requests and round invitations. It is deleted when you turn notifications off or close your account.</li>
-  <li><strong>IP address:</strong> recorded temporarily when you request a sign-in code, purely for rate limiting. It is held in an in-memory cache that expires within minutes, is <strong>never written to our database</strong>, and is not used for profiling.</li>
+  <li><strong>IP address:</strong> used for two purposes. First, recorded temporarily when you request a sign-in code, purely for rate limiting, in an in-memory cache that expires within minutes. Second, as required by China's Provisions on the Administration of Internet User Account Information, we resolve and display the <strong>IP-derived region</strong> of each post at the time it is published (province level within mainland China, country level elsewhere) and the region of your most recent activity on your profile page; to do this we store your most recent IP, its region, and the region attached to each post. <strong>The IP address itself is never shown to other users</strong>; the region label is a regulatory requirement and cannot be turned off. Beyond these uses, IP data is not used for profiling.</li>
   <li><strong>Server access logs:</strong> standard web logs (timestamp, request path, status code) used for troubleshooting and abuse prevention.</li>
   <li><strong>Activity counter:</strong> we record whether you used the App on a given day, to compute aggregate daily/weekly active-user numbers. It is not used to build a profile and is never shared.</li>
 </ul>
