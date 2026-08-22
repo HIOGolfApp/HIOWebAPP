@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 分享落地页:每个 /m/{id} 都是瞬时内容,不进搜索索引 -->
+<meta name="robots" content="noindex">
+<title>约球邀请 — 一杆高尔夫</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b3d2e">
+<style>
+  :root {
+    --pine: #0b3d2e; --fairway: #1a7a4f; --cream: #f7f5ef;
+    --sand: #efe9dc; --gold: #c9a227; --ink: #1c2420; --ink-soft: #55635c;
+    --line: #e3ded2; --card: #ffffff; --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    color: var(--ink); background: var(--pine); min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 20px 40px; line-height: 1.7;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; color: var(--cream); font-weight: 700; font-size: 17px; margin: 8px 0 28px; letter-spacing: .5px; }
+  .card {
+    width: 100%; max-width: 420px; background: var(--card);
+    border-radius: var(--radius); padding: 28px 24px; box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; color: var(--fairway); background: #e8f4ed; border-radius: 999px; padding: 2px 10px; margin-bottom: 10px; }
+  .tag.closed { color: #a05a2c; background: #f6ead9; }
+  h1 { font-size: 22px; line-height: 1.4; margin-bottom: 18px; word-break: break-word; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .row:last-of-type { border-bottom: none; }
+  .row .k { color: var(--ink-soft); flex-shrink: 0; }
+  .row .v { text-align: right; font-weight: 600; }
+  .cta {
+    display: block; text-align: center; margin-top: 22px; padding: 13px 0;
+    background: var(--pine); color: #fff; border-radius: 999px;
+    font-size: 16px; font-weight: 600; text-decoration: none;
+  }
+  .hint { text-align: center; font-size: 12.5px; color: var(--ink-soft); margin-top: 12px; }
+  .state { text-align: center; padding: 30px 0 10px; color: var(--ink-soft); font-size: 15px; }
+  .foot { color: rgba(247,245,239,.55); font-size: 12px; margin-top: 26px; text-align: center; }
+  .foot a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="brand">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 21V4l12 4.5L6 13" stroke="#c9a227" stroke-width="2" stroke-linejoin="round"/><circle cx="6" cy="21" r="1.6" fill="#f7f5ef"/></svg>
+  一杆高尔夫 HIO Golf
+</div>
+
+<div class="card">
+  <div id="loading" class="state">正在加载球局信息…</div>
+  <div id="content" style="display:none">
+    <span class="tag" id="statusTag">报名中</span>
+    <h1 id="title"></h1>
+    <div class="row"><span class="k">球场</span><span class="v" id="course"></span></div>
+    <div class="row"><span class="k">开球时间</span><span class="v" id="playAt"></span></div>
+    <div class="row"><span class="k">人数</span><span class="v" id="players"></span></div>
+    <div class="row"><span class="k">发起人</span><span class="v" id="host"></span></div>
+    <a class="cta" href="https://apps.apple.com/cn/app/id6789452083" id="cta">打开「一杆高尔夫」申请加入</a>
+    <p class="hint">已安装 App:打开后在「首页 → 约球」找到这个球局<br>未安装:点上方按钮从 App Store 下载</p>
+  </div>
+  <div id="error" class="state" style="display:none">球局不存在或已被删除</div>
+</div>
+
+<p class="foot">© 一杆高尔夫 · <a href="/">hiogolf.cn</a></p>
+
+<script>
+(function () {
+  var m = location.pathname.match(/^\/m\/(\d+)$/);
+  var loading = document.getElementById('loading');
+  var content = document.getElementById('content');
+  var error = document.getElementById('error');
+  if (!m) { loading.style.display = 'none'; error.style.display = 'block'; return; }
+
+  fetch('/public-api/v1/public/meetups/' + m[1])
+    .then(function (r) { return r.json(); })
+    .then(function (body) {
+      if (!body || body.code !== 0 || !body.data) { throw new Error('not found'); }
+      var d = body.data;
+      document.getElementById('title').textContent = d.title || '一起打球';
+      document.getElementById('course').textContent =
+          (d.courseName || '待定') + (d.city ? ' · ' + d.city : '');
+      document.getElementById('playAt').textContent = formatTime(d.playAt);
+      document.getElementById('players').textContent =
+          (d.joinedCount || 1) + ' / ' + (d.maxPlayers || '-') + ' 人';
+      document.getElementById('host').textContent = d.hostNickname || '球友';
+      if (!d.open) {
+        var tag = document.getElementById('statusTag');
+        tag.textContent = '已结束报名';
+        tag.className = 'tag closed';
+      }
+      loading.style.display = 'none';
+      content.style.display = 'block';
+    })
+    .catch(function () {
+      loading.style.display = 'none';
+      error.style.display = 'block';
+    });
+
+  function formatTime(iso) {
+    if (!iso) { return '待定'; }
+    var t = new Date(iso.replace(' ', 'T'));
+    if (isNaN(t)) { return iso; }
+    var week = ['日', '一', '二', '三', '四', '五', '六'][t.getDay()];
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    return (t.getMonth() + 1) + '月' + t.getDate() + '日(周' + week + ') '
+        + pad(t.getHours()) + ':' + pad(t.getMinutes());
+  }
+})();
+</script>
+</body>
+</html>
