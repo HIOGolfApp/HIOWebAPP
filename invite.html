@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 邀请落地页:每个 /i/{HIO_ID} 都落到本页,页内 JS 解析邀请码;瞬时内容不进搜索索引 -->
+<meta name="robots" content="noindex">
+<title>好友邀请 — 一杆高尔夫</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b3d2e">
+<style>
+  :root {
+    --pine: #0b3d2e; --fairway: #1a7a4f; --cream: #f7f5ef;
+    --sand: #efe9dc; --gold: #c9a227; --ink: #1c2420; --ink-soft: #55635c;
+    --line: #e3ded2; --card: #ffffff; --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    color: var(--ink); background: var(--pine); min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 20px 40px; line-height: 1.7;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; color: var(--cream); font-weight: 700; font-size: 17px; margin: 8px 0 28px; letter-spacing: .5px; }
+  .card {
+    width: 100%; max-width: 420px; background: var(--card);
+    border-radius: var(--radius); padding: 30px 24px 26px; box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    text-align: center;
+  }
+  .avatar {
+    width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 14px;
+    background: var(--sand); border: 2px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; font-size: 30px;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  h1 { font-size: 21px; line-height: 1.45; margin-bottom: 10px; word-break: break-word; }
+  h1 .nick { color: var(--fairway); }
+  .sub { font-size: 14px; color: var(--ink-soft); margin-bottom: 20px; }
+  .cta {
+    display: block; width: 100%; text-align: center; padding: 13px 0;
+    background: var(--pine); color: #fff; border: none; border-radius: 999px;
+    font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .cta.done { background: var(--fairway); }
+  .hint { font-size: 12.5px; color: var(--ink-soft); margin-top: 12px; }
+  .steps {
+    margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line);
+    text-align: left; font-size: 13px; color: var(--ink-soft);
+  }
+  .steps p { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
+  .steps .n {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--sand); color: var(--fairway); font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center; transform: translateY(2px);
+  }
+  .foot { color: rgba(247,245,239,.55); font-size: 12px; margin-top: 26px; text-align: center; }
+  .foot a { color: inherit; }
+  /* 微信内置浏览器引导层 */
+  #wechatMask {
+    display: none; position: fixed; inset: 0; z-index: 99;
+    background: rgba(0,0,0,.75); color: #fff; padding: 24px;
+  }
+  #wechatMask .arrow { position: absolute; top: 14px; right: 26px; font-size: 40px; line-height: 1; }
+  #wechatMask .tip { margin-top: 76px; text-align: right; font-size: 17px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="brand">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 21V4l12 4.5L6 13" stroke="#c9a227" stroke-width="2" stroke-linejoin="round"/><circle cx="6" cy="21" r="1.6" fill="#f7f5ef"/></svg>
+  一杆高尔夫 HIO Golf
+</div>
+
+<div class="card">
+  <div class="avatar" id="avatar">⛳️</div>
+  <h1 id="title">邀请你加入「一杆高尔夫」</h1>
+  <p class="sub" id="sub">记分、约球、找球友,都在一个 App 里</p>
+  <button class="cta" id="copyBtn" type="button">复制邀请码并去下载</button>
+  <p class="hint">装好 App 后注册,邀请会自动生效,无需手动填码</p>
+  <div class="steps">
+    <p><span class="n">1</span>点这里复制邀请链接,并前往 App Store</p>
+    <p><span class="n">2</span>下载并安装「一杆高尔夫」App</p>
+    <p><span class="n">3</span>打开 App 完成注册,即自动与邀请人绑定</p>
+  </div>
+</div>
+
+<p class="foot">© 一杆高尔夫 · <a href="/">hiogolf.cn</a></p>
+
+<div id="wechatMask">
+  <div class="arrow">↗</div>
+  <div class="tip">点右上角 「···」<br>选择<strong>「在浏览器打开」</strong><br><br>即可复制邀请链接并前往 App Store</div>
+</div>
+
+<script>
+(function () {
+  var STORE = 'https://apps.apple.com/cn/app/id6789452083';
+  var m = location.pathname.match(/^\/i\/([A-Za-z0-9]+)$/);
+  var code = m ? m[1] : null;
+  var link = code ? 'https://hiogolf.cn/i/' + code : 'https://hiogolf.cn';
+  var isWechat = /MicroMessenger/i.test(navigator.userAgent);
+
+  // —— 微信内置浏览器:剪贴板与跳转 App Store 都不可靠,只留引导层 ——
+  if (isWechat) {
+    document.getElementById('wechatMask').style.display = 'block';
+    document.getElementById('copyBtn').style.display = 'none';
+  }
+
+  // —— 从 UA 解析 OS 版本(iOS "17_5"→"17.5" / Android / macOS),解析不出传 null ——
+  function osVersion() {
+    var ua = navigator.userAgent;
+    var r = ua.match(/(?:iPhone|iPad|iPod).*?OS (\d+[_.]\d+(?:[_.]\d+)?)/)
+         || ua.match(/Android (\d+(?:\.\d+)*)/)
+         || ua.match(/Mac OS X (\d+[_.]\d+(?:[_.]\d+)?)/);
+    return r ? r[1].replace(/_/g, '.') : null;
+  }
+
+  // —— ① fire-and-forget 记录点击指纹(无论 code 是否存在,服务端一律返回成功防探测) ——
+  if (code) {
+    try {
+      fetch('/public-api/v1/public/invite/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: code,
+          osVersion: osVersion(),
+          screenW: (screen && screen.width) || null,
+          screenH: (screen && screen.height) || null
+        })
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  // —— ② 拉邀请人昵称头像;40400 或任何失败都退化为通用文案 ——
+  if (code) {
+    fetch('/public-api/v1/public/invite/' + code)
+      .then(function (r) { return r.json(); })
+      .then(function (body) {
+        if (!body || body.code !== 0 || !body.data) { return; }
+        var d = body.data;
+        if (d.nickname) {
+          var h1 = document.getElementById('title');
+          h1.textContent = '';
+          var nick = document.createElement('span');
+          nick.className = 'nick';
+          nick.textContent = d.nickname;
+          h1.appendChild(nick);
+          h1.appendChild(document.createTextNode(' 邀请你加入一杆高尔夫'));
+        }
+        if (d.avatarUrl) {
+          var img = document.createElement('img');
+          img.alt = '';
+          img.onload = function () {
+            var box = document.getElementById('avatar');
+            box.textContent = '';
+            box.appendChild(img);
+          };
+          img.src = d.avatarUrl;
+        }
+      })
+      .catch(function () {});
+  }
+
+  // —— 复制邀请链接(必须在点击手势内),带 execCommand 降级,600ms 后跳 App Store ——
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  var btn = document.getElementById('copyBtn');
+  if (!code) {
+    // 无邀请码的通用页:不复制,直接去 App Store
+    btn.textContent = '去 App Store 下载';
+    document.querySelector('.hint').textContent = '通过好友的邀请链接打开本页,注册时可获得新人积分';
+  }
+  var pending = false;
+  btn.addEventListener('click', function () {
+    if (pending) { return; }
+    if (!code) { location.href = STORE; return; }
+    pending = true;
+    function done() {
+      btn.textContent = '已复制✓';
+      btn.className = 'cta done';
+      setTimeout(function () {
+        pending = false;
+        location.href = STORE;
+      }, 600);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(done, function () {
+        fallbackCopy(link);
+        done();
+      });
+    } else {
+      fallbackCopy(link);
+      done();
+    }
+  });
+})();
+</script>
+</body>
+</html>
