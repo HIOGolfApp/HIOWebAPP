@@ -152,7 +152,7 @@
     var m = Math.round(min);
     if (m < 60) return m + ' 分钟';
     var h = Math.floor(m / 60), r = m % 60;
-    return h + '小时' + (r ? r + '分' : '');
+    return h + ' 小时' + (r ? ' ' + r + ' 分' : '');
   }
   function clamp(x, lo, hi) { return x < lo ? lo : (x > hi ? hi : x); }
   function median(arr) {
@@ -182,6 +182,13 @@
     return Math.round(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) / 86400000);
   }
   function daysBetween(a, b) { return dayNumber(b) - dayNumber(a); }
+  // 有效回合数的时间衰减:nEff × 0.5^(天数/半衰期);缺日期则原样返回
+  function decayN(nEff, lastRoundDate, todayDate, cfg) {
+    if (!lastRoundDate || !todayDate) return nEff;
+    var d = daysBetween(lastRoundDate, todayDate);
+    if (!isFinite(d)) return nEff;
+    return nEff * Math.pow(0.5, Math.max(0, d) / cfg.halfLifeDays);
+  }
   // 分组稳定排序键:(teeMin asc, id asc)
   function compareByTee(a, b) {
     if (a.tee !== b.tee) return a.tee - b.tee;
@@ -207,6 +214,7 @@
     mean: mean,
     dayNumber: dayNumber,
     daysBetween: daysBetween,
+    decayN: decayN,
     compareByTee: compareByTee
   };
 });

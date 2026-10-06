@@ -88,8 +88,8 @@ test('time helpers', () => {
   assert.equal(Course.parseHM('6:30'), 390);
   assert.ok(Number.isNaN(Course.parseHM('abc')));
   assert.equal(Course.fmtDur(6.4), '6 分钟');
-  assert.equal(Course.fmtDur(112), '1小时52分');
-  assert.equal(Course.fmtDur(120), '2小时');
+  assert.equal(Course.fmtDur(112), '1 小时 52 分');
+  assert.equal(Course.fmtDur(120), '2 小时');
 });
 
 test('math helpers: clamp, median, percentile, mean, daysBetween, compareByTee', () => {
@@ -104,4 +104,13 @@ test('math helpers: clamp, median, percentile, mean, daysBetween, compareByTee',
   assert.equal(Course.daysBetween('2026-10-06', '2026-10-01'), -5);
   const arr = [{ id: 'b', tee: 480 }, { id: 'a', tee: 480 }, { id: 'c', tee: 470 }].sort(Course.compareByTee);
   assert.deepEqual(arr.map(x => x.id), ['c', 'a', 'b']);
+});
+
+test('decayN halves nEff per half-life and ignores missing dates', () => {
+  const cfg = Course.defaultConfig();
+  approx(Course.decayN(4, '2026-01-01', '2026-06-30', cfg), 2);          // 180 days
+  approx(Course.decayN(3, '2026-10-06', '2026-10-06', cfg), 3);
+  approx(Course.decayN(3, '2026-10-05', '2026-10-06', cfg), 3 * Math.pow(0.5, 1 / 180));
+  assert.equal(Course.decayN(3, null, '2026-10-06', cfg), 3);
+  approx(Course.decayN(3, '2026-10-07', '2026-10-06', cfg), 3);          // future date → no decay
 });
