@@ -18,11 +18,30 @@
 | 文件 | 说明 |
 |---|---|
 | `index.html` | 全站页面（内联 CSS/JS），响应式 + 入场动画 |
-| `nginx/hiogolf-site.conf` | nginx 站点配置：静态服务 + 数据接口同源反代 |
+| `meetup.html` / `invite.html` | 约球分享、邀请落地页（`/m/{id}`、`/i/{code}`） |
+| `tee/` | **球场端 Tee Time 管理**（见下节）：`index.html` 球场端控制台、`live.html` 球员/球童端、`js/` 零构建引擎与数据层、`test/` 单元测试与冒烟测试 |
+| `docs/tee-time.md` | Tee Time 模块产品/算法/后端接口合同/共用后端方案 |
+| `nginx/hiogolf-site.conf` | nginx 站点配置：静态服务 + 数据接口同源反代（`/public-api/`、`/tee-api/`） |
 
 ### 实时数据
 
 球场覆盖列表与统计不写死在页面里，而是加载时 fetch `/public-api/v1/public/course-coverage`，由 nginx 同源反代到后端的免登录聚合接口（服务端缓存 10 分钟）。球场目录每次清洗、测绘每次扩展，官网数字自动跟上，无需改版发布。
+
+## 球场端 Tee Time 管理（`tee/`）
+
+面向球场运营方的开球时间（tee time）管理与打球节奏（pace of play）监控，同一仓库内的纯静态子应用，**零构建、零 CDN**，
+后端未上线时自动进入「演示模式」（本地模拟一整天球场运转），可直接打开体验：
+
+- `tee/index.html` **球场端控制台**：发球表与开球派发（默认 8 分钟间隔，有客户历史数据的球组 6–8 分钟，派发前校验「不影响后面任何一组」）、
+  实时场况与巡查建议（黄点 = 已超时，红点 = 超时 10 分钟以上；会员黑、普通白）、旺季并组建议、球场参数与标准时间校准（3 杆 7 / 4 杆 11 / 5 杆 15 分钟 + 转场时间，可现场调、可按实测建议）。
+- `tee/live.html` **客户端（球员 / 球童）**：各洞当前球组位置（不显示姓名，好友除外）、本洞剩余时间、红色预警下的「让后组先过」建议、球童与客人互评（仅本人可见）。
+- 引擎 `tee/js/*.js`：纯函数、可在 Node 中单测（`node tee/test/run.js`），既驱动演示模式，也作为后端 Java 移植的参考实现与黄金用例。
+- 后端：推荐作为 `HIO-backend` 的一个新模块（`/api/v1/tee/**`）共用现有用户、好友、球场、记分卡数据，网站侧经 nginx 同源反代 `/tee-api/v1/`。详见 [`docs/tee-time.md`](docs/tee-time.md)。
+
+```bash
+node tee/test/run.js              # 单元测试 + 引擎纯净性 lint(零依赖)
+node tee/test/smoke/smoke.js      # 浏览器冒烟测试(需本机有 playwright 包)
+```
 
 ## 部署（服务器）
 
@@ -40,11 +59,11 @@ nginx -t && systemctl reload nginx
 cd /opt/hio-website && git pull
 ```
 
-改动涉及 `nginx/hiogolf-site.conf` 时需额外重新拷贝配置并 `nginx -t && systemctl reload nginx`。
+改动涉及 `nginx/hiogolf-site.conf` 时需额外重新拷贝配置并 `nginx -t && systemctl reload nginx`（本次新增 `/tee-api/v1/` 反代即属此类）。
 
 ## 相关
 
-- 后端：`HIOGolfApp/HIO-backend`（Spring Boot，提供 `/api/v1/public/*` 免登录数据接口）
+- 后端：`HIOGolfApp/HIO-backend`（Spring Boot，提供 `/api/v1/public/*` 免登录数据接口；Tee Time 模块规划为其中的 `/api/v1/tee/*`）
 - iOS App：`HIOGolfApp/HIO-ios`（SwiftUI）
 
 ---
