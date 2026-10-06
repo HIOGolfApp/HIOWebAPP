@@ -214,14 +214,18 @@
       544: { size: 3, noShow: true, autoSend: false, notes: '演示：未到（不会签到）' },
       560: { size: 3, late: true, autoSend: false, notes: '演示：迟到 12 分钟' },
       640: { size: 2, members: false, tf: 1.0, notes: '演示：并组候选 A（2 人）' },
-      648: { size: 1, members: false, tf: 1.0, notes: '演示：并组候选 B（1 人）' }
+      648: { size: 1, members: false, tf: 1.0, notes: '演示：并组候选 B（1 人）' },
+      784: { size: 2, members: false, tf: 1.0, notes: '演示：下午并组候选 C（2 人）' },   // 13:04 / 13:12:开球前 2 小时才过期,
+      792: { size: 1, members: false, tf: 1.0, notes: '演示：下午并组候选 D（1 人）' }    // 上午全程都能在「并组建议」里看到并操作
     };
     const bookings = [];
     const trueFactorById = {};
     const paceStats = {};
     const fastIds = [];
-    for (let t = 392; t <= 656; t += 8) {
-      if (GAPS[t]) continue;
+    const TIMES = [];
+    for (let t = 392; t <= 656; t += 8) if (!GAPS[t]) TIMES.push(t);
+    TIMES.push(784, 792);
+    for (const t of TIMES) {
       const pin = PIN[t] || {};
       const size = pin.size != null ? pin.size : (rng() < 0.25 ? 3 : 4);
       const ps = [];

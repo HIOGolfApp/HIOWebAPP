@@ -25,14 +25,16 @@ async function rejects(promise, code) {
 }
 
 // ---------- demoSeed ----------
-test('store: demoSeed pins — 演示球场, peakMode, 26 bookings on the 8-min grid, every SPEC §8.3 pin present', () => {
+test('store: demoSeed pins — 演示球场, peakMode, 26 morning bookings on the 8-min grid + an afternoon merge pair, every SPEC §8.3 pin present', () => {
   const s = Store.demoSeed(D, 1);
+  const by0 = id => s.bookings.find(b => b.id === id);
   assert.equal(s.course.name, '演示球场');
   assert.equal(s.course.holes.length, 18);
   assert.equal(s.sheet.peakMode, true); assert.equal(s.sheet.openMin, 390); assert.equal(s.sheet.closeMin, 960);
   assert.ok(s.bookings.length >= 24 && s.bookings.length <= 28, 'bookings ' + s.bookings.length);
   const tees = s.bookings.map(b => b.teeMin);
-  tees.forEach(t => { assert.equal(t % 8, 0); assert.ok(t >= 390 && t <= 660); });
+  tees.forEach(t => { assert.equal(t % 8, 0); assert.ok(t >= 390 && t <= 800); });
+  assert.ok(by0('b1304') && by0('b1312'), 'afternoon merge pair 13:04 / 13:12 present');
   assert.equal(new Set(tees).size, tees.length, 'no duplicate slots');
   assert.ok(tees.length < 34, 'has gaps');
   const by = {}; s.bookings.forEach(b => { by[b.id] = b; });
@@ -328,7 +330,8 @@ test('store: proposeMerge → respondMerge (both sides) → confirmed → applyM
   assert.equal(Merge.peakActive(st5.sheet, st5.bookings, st5.course.config, 0), true);
   assert.equal(st5.proposals.filter(p => p.status === 'suggested').length, 1);
   await x.command('cancel', { id: MERGE_A });
-  assert.equal(st5.proposals.length, 0);
+  assert.equal(st5.proposals.filter(p => p.a === MERGE_A || p.b === MERGE_A).length, 0, 'cancelled pair is dropped');
+  assert.equal(st5.proposals.filter(p => p.status === 'suggested').length, 1, 'the afternoon pair takes over the single suggestion slot (maxShare cap)');
   // 利用率不足 + 非旺季 → 没有建议;开启旺季 → 建议出现
   const y = await mkStore();
   const st6 = y.getState();
