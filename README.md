@@ -53,13 +53,17 @@ cp /opt/hio-website/nginx/hiogolf-site.conf /etc/nginx/conf.d/hiogolf-site.conf
 nginx -t && systemctl reload nginx
 ```
 
-日常更新（纯静态，push 后在服务器上执行即可，无需 reload）：
+日常更新（在服务器上执行一条命令：拉取 main，nginx 配置有变化时自动拷贝并 reload）：
 
 ```bash
-cd /opt/hio-website && git pull
+bash /opt/hio-website/scripts/deploy-site.sh
 ```
 
-改动涉及 `nginx/hiogolf-site.conf` 时需额外重新拷贝配置并 `nginx -t && systemctl reload nginx`（本次新增 `/tee-api/v1/` 反代即属此类）。
+想让 main 一合并就自动上线，加一条 cron（每 2 分钟检查一次，无变化时什么都不做）：
+
+```bash
+echo '*/2 * * * * bash /opt/hio-website/scripts/deploy-site.sh >> /var/log/hio-site-deploy.log 2>&1' | crontab -
+```
 
 ## 相关
 
