@@ -53,9 +53,14 @@ cp /opt/hio-website/nginx/hiogolf-site.conf /etc/nginx/conf.d/hiogolf-site.conf
 nginx -t && systemctl reload nginx
 ```
 
-日常更新（在服务器上执行一条命令：拉取 main，nginx 配置有变化时自动拷贝并 reload）：
+日常更新，两种方式任选：
 
 ```bash
+# A. 在有部署密钥的电脑上(与后端 HIO-backend/scripts/deploy.sh 同一把密钥 ~/.ssh/aigolf_deploy):
+bash scripts/deploy.sh              # 预检已推送到 main -> 服务器拉取 + 按需 reload nginx
+bash scripts/deploy.sh --cron       # 同上,并在服务器装 cron,以后 main 一合并自动上线
+
+# B. 直接在服务器上:
 bash /opt/hio-website/scripts/deploy-site.sh
 ```
 

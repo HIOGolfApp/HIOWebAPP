@@ -13,8 +13,9 @@ NGINX_DST="${NGINX_DST:-/etc/nginx/conf.d/hiogolf-site.conf}"
 cd "$SITE_DIR"
 before=$(git rev-parse HEAD)
 git fetch -q origin main
+# 只做快进:服务器上若有未提交的本地改动或分叉,这里会报错停下,由人来决定,绝不悄悄覆盖
 git checkout -q main
-git reset -q --hard origin/main
+git merge -q --ff-only origin/main
 after=$(git rev-parse HEAD)
 
 if [ "$before" != "$after" ]; then
