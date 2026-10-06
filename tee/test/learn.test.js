@@ -401,3 +401,18 @@ test('resetDefaults restores 7/11/15, transit 2 and clearFrac by par; other hole
   // cfg 省略时使用 course.config
   assert.equal(Learn.resetDefaults(changed).holes[0].std, 11);
 });
+
+// ---------- 回归:审阅发现 ----------
+test('updatePlayer: fRound null/NaN/undefined → stats returned unchanged (copy), no fabricated round; null stats → null', () => {
+  const s0 = { playerId: 'p', f: 0.9, v: 0.04, nEff: 2, lastRoundDate: '2026-10-01', roundsScored: 2 };
+  const frozen = JSON.stringify(s0);
+  for (const bad of [null, undefined, NaN, Infinity, '0.9']) {
+    const r = Learn.updatePlayer(s0, bad, D, cfg);
+    assert.deepEqual(r, s0); assert.notEqual(r, s0);
+    assert.equal(Learn.updatePlayer(null, bad, D, cfg), null);
+  }
+  assert.equal(JSON.stringify(s0), frozen);
+  // 正常值仍按 EMA 更新
+  const ok = Learn.updatePlayer(null, 0.8, D, cfg);
+  approx(ok.f, 0.8); assert.equal(ok.roundsScored, 1); approx(ok.nEff, 1);
+});

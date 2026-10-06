@@ -1,0 +1,617 @@
+{
+ "engineVersion": "1.0.0",
+ "holes": [
+  {
+   "no": 1,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 392
+  },
+  {
+   "no": 2,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 410
+  },
+  {
+   "no": 3,
+   "par": 3,
+   "std": 7,
+   "transit": 2,
+   "clearFrac": 1,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 165
+  },
+  {
+   "no": 4,
+   "par": 5,
+   "std": 15,
+   "transit": 2,
+   "clearFrac": 0.4,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 530
+  },
+  {
+   "no": 5,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 405
+  },
+  {
+   "no": 6,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 388
+  },
+  {
+   "no": 7,
+   "par": 3,
+   "std": 7,
+   "transit": 2,
+   "clearFrac": 1,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 180
+  },
+  {
+   "no": 8,
+   "par": 5,
+   "std": 15,
+   "transit": 2,
+   "clearFrac": 0.4,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 545
+  },
+  {
+   "no": 9,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 415
+  },
+  {
+   "no": 10,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 398
+  },
+  {
+   "no": 11,
+   "par": 3,
+   "std": 7,
+   "transit": 2,
+   "clearFrac": 1,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 172
+  },
+  {
+   "no": 12,
+   "par": 5,
+   "std": 15,
+   "transit": 2,
+   "clearFrac": 0.4,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 520
+  },
+  {
+   "no": 13,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 420
+  },
+  {
+   "no": 14,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 385
+  },
+  {
+   "no": 15,
+   "par": 3,
+   "std": 7,
+   "transit": 2,
+   "clearFrac": 1,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 160
+  },
+  {
+   "no": 16,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 430
+  },
+  {
+   "no": 17,
+   "par": 5,
+   "std": 15,
+   "transit": 2,
+   "clearFrac": 0.4,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 555
+  },
+  {
+   "no": 18,
+   "par": 4,
+   "std": 11,
+   "transit": 2,
+   "clearFrac": 0.45,
+   "minGap": 6,
+   "minFollow": 1,
+   "yards": 400
+  }
+ ],
+ "groups": [
+  {
+   "id": "A",
+   "tee": 480,
+   "f": 1,
+   "plan": {
+    "fPlan": 1,
+    "confident": false
+   },
+   "size": 4,
+   "onCourse": false
+  },
+  {
+   "id": "B",
+   "tee": 486,
+   "f": 1,
+   "plan": {
+    "fPlan": 1,
+    "confident": false
+   },
+   "size": 4,
+   "onCourse": false
+  },
+  {
+   "id": "C",
+   "tee": 492,
+   "f": 1,
+   "plan": {
+    "fPlan": 1,
+    "confident": false
+   },
+   "size": 4,
+   "onCourse": false
+  },
+  {
+   "id": "D",
+   "tee": 498,
+   "f": 1,
+   "plan": {
+    "fPlan": 1,
+    "confident": false
+   },
+   "size": 4,
+   "onCourse": false
+  }
+ ],
+ "expected": {
+  "A": {
+   "rows": [
+    {
+     "holeNo": 1,
+     "start": 480,
+     "finish": 491
+    },
+    {
+     "holeNo": 2,
+     "start": 493,
+     "finish": 504
+    },
+    {
+     "holeNo": 3,
+     "start": 506,
+     "finish": 513
+    },
+    {
+     "holeNo": 4,
+     "start": 515,
+     "finish": 530
+    },
+    {
+     "holeNo": 5,
+     "start": 532,
+     "finish": 543
+    },
+    {
+     "holeNo": 6,
+     "start": 545,
+     "finish": 556
+    },
+    {
+     "holeNo": 7,
+     "start": 558,
+     "finish": 565
+    },
+    {
+     "holeNo": 8,
+     "start": 567,
+     "finish": 582
+    },
+    {
+     "holeNo": 9,
+     "start": 584,
+     "finish": 595
+    },
+    {
+     "holeNo": 10,
+     "start": 597,
+     "finish": 608
+    },
+    {
+     "holeNo": 11,
+     "start": 610,
+     "finish": 617
+    },
+    {
+     "holeNo": 12,
+     "start": 619,
+     "finish": 634
+    },
+    {
+     "holeNo": 13,
+     "start": 636,
+     "finish": 647
+    },
+    {
+     "holeNo": 14,
+     "start": 649,
+     "finish": 660
+    },
+    {
+     "holeNo": 15,
+     "start": 662,
+     "finish": 669
+    },
+    {
+     "holeNo": 16,
+     "start": 671,
+     "finish": 682
+    },
+    {
+     "holeNo": 17,
+     "start": 684,
+     "finish": 699
+    },
+    {
+     "holeNo": 18,
+     "start": 701,
+     "finish": 712
+    }
+   ],
+   "finish": 712,
+   "waitMin": 0
+  },
+  "B": {
+   "rows": [
+    {
+     "holeNo": 1,
+     "start": 486,
+     "finish": 497
+    },
+    {
+     "holeNo": 2,
+     "start": 499,
+     "finish": 510
+    },
+    {
+     "holeNo": 3,
+     "start": 513,
+     "finish": 520
+    },
+    {
+     "holeNo": 4,
+     "start": 522,
+     "finish": 537
+    },
+    {
+     "holeNo": 5,
+     "start": 539,
+     "finish": 550
+    },
+    {
+     "holeNo": 6,
+     "start": 552,
+     "finish": 563
+    },
+    {
+     "holeNo": 7,
+     "start": 565,
+     "finish": 572
+    },
+    {
+     "holeNo": 8,
+     "start": 574,
+     "finish": 589
+    },
+    {
+     "holeNo": 9,
+     "start": 591,
+     "finish": 602
+    },
+    {
+     "holeNo": 10,
+     "start": 604,
+     "finish": 615
+    },
+    {
+     "holeNo": 11,
+     "start": 617,
+     "finish": 624
+    },
+    {
+     "holeNo": 12,
+     "start": 626,
+     "finish": 641
+    },
+    {
+     "holeNo": 13,
+     "start": 643,
+     "finish": 654
+    },
+    {
+     "holeNo": 14,
+     "start": 656,
+     "finish": 667
+    },
+    {
+     "holeNo": 15,
+     "start": 669,
+     "finish": 676
+    },
+    {
+     "holeNo": 16,
+     "start": 678,
+     "finish": 689
+    },
+    {
+     "holeNo": 17,
+     "start": 691,
+     "finish": 706
+    },
+    {
+     "holeNo": 18,
+     "start": 708,
+     "finish": 719
+    }
+   ],
+   "finish": 719,
+   "waitMin": 1
+  },
+  "C": {
+   "rows": [
+    {
+     "holeNo": 1,
+     "start": 492,
+     "finish": 503
+    },
+    {
+     "holeNo": 2,
+     "start": 505,
+     "finish": 516
+    },
+    {
+     "holeNo": 3,
+     "start": 520,
+     "finish": 527
+    },
+    {
+     "holeNo": 4,
+     "start": 529,
+     "finish": 544
+    },
+    {
+     "holeNo": 5,
+     "start": 546,
+     "finish": 557
+    },
+    {
+     "holeNo": 6,
+     "start": 559,
+     "finish": 570
+    },
+    {
+     "holeNo": 7,
+     "start": 572,
+     "finish": 579
+    },
+    {
+     "holeNo": 8,
+     "start": 581,
+     "finish": 596
+    },
+    {
+     "holeNo": 9,
+     "start": 598,
+     "finish": 609
+    },
+    {
+     "holeNo": 10,
+     "start": 611,
+     "finish": 622
+    },
+    {
+     "holeNo": 11,
+     "start": 624,
+     "finish": 631
+    },
+    {
+     "holeNo": 12,
+     "start": 633,
+     "finish": 648
+    },
+    {
+     "holeNo": 13,
+     "start": 650,
+     "finish": 661
+    },
+    {
+     "holeNo": 14,
+     "start": 663,
+     "finish": 674
+    },
+    {
+     "holeNo": 15,
+     "start": 676,
+     "finish": 683
+    },
+    {
+     "holeNo": 16,
+     "start": 685,
+     "finish": 696
+    },
+    {
+     "holeNo": 17,
+     "start": 698,
+     "finish": 713
+    },
+    {
+     "holeNo": 18,
+     "start": 715,
+     "finish": 726
+    }
+   ],
+   "finish": 726,
+   "waitMin": 2
+  },
+  "D": {
+   "rows": [
+    {
+     "holeNo": 1,
+     "start": 498,
+     "finish": 509
+    },
+    {
+     "holeNo": 2,
+     "start": 511,
+     "finish": 522
+    },
+    {
+     "holeNo": 3,
+     "start": 527,
+     "finish": 534
+    },
+    {
+     "holeNo": 4,
+     "start": 536,
+     "finish": 551
+    },
+    {
+     "holeNo": 5,
+     "start": 553,
+     "finish": 564
+    },
+    {
+     "holeNo": 6,
+     "start": 566,
+     "finish": 577
+    },
+    {
+     "holeNo": 7,
+     "start": 579,
+     "finish": 586
+    },
+    {
+     "holeNo": 8,
+     "start": 588,
+     "finish": 603
+    },
+    {
+     "holeNo": 9,
+     "start": 605,
+     "finish": 616
+    },
+    {
+     "holeNo": 10,
+     "start": 618,
+     "finish": 629
+    },
+    {
+     "holeNo": 11,
+     "start": 631,
+     "finish": 638
+    },
+    {
+     "holeNo": 12,
+     "start": 640,
+     "finish": 655
+    },
+    {
+     "holeNo": 13,
+     "start": 657,
+     "finish": 668
+    },
+    {
+     "holeNo": 14,
+     "start": 670,
+     "finish": 681
+    },
+    {
+     "holeNo": 15,
+     "start": 683,
+     "finish": 690
+    },
+    {
+     "holeNo": 16,
+     "start": 692,
+     "finish": 703
+    },
+    {
+     "holeNo": 17,
+     "start": 705,
+     "finish": 720
+    },
+    {
+     "holeNo": 18,
+     "start": 722,
+     "finish": 733
+    }
+   ],
+   "finish": 733,
+   "waitMin": 3
+  }
+ }
+}

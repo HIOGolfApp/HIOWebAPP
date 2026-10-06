@@ -123,6 +123,8 @@
   // ---------- §4 updatePlayer / decayedN ----------
   function updatePlayer(stats, fRound, date, cfg) {
     cfg = cfgOf(cfg);
+    // fRound 为 null/NaN(本轮未评分)→ 不更新:原样返回(拷贝),不凭空计一轮
+    if (!isNum(fRound)) return stats ? assign({}, stats) : null;
     var n = stats ? Course.decayN(Number(stats.nEff) || 0, stats.lastRoundDate, date, cfg) : 0;
     if (!isNum(n) || n < 0) n = 0;
     var alpha = Math.max(cfg.emaAlpha, 1 / (n + 1));
