@@ -21,6 +21,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   font-size: 15px;
+  font-variant-numeric: tabular-nums;   /* 所有数字等宽:时间 / 分钟列随时钟变化时不抖动(.num 保留为无害标记) */
 }
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
@@ -29,7 +30,8 @@ button { cursor: pointer; }
 .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
 .hidden { display: none !important; }
 .muted { color: var(--sub); }
-.tiny { font-size: 12.5px; color: var(--tertiary); }
+.tiny { font-size: 12.5px; color: var(--sub); }                 /* 承载数据的小字用 --sub(5.07:1);--tertiary 只用于装饰性说明 */
+.tiny.deco, .tiny .deco { color: var(--tertiary); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- 顶栏 ---------- */
@@ -47,6 +49,7 @@ button { cursor: pointer; }
 .brand svg { display: block; }
 .brand .sep { color: var(--tertiary); font-weight: 500; }
 .topbar .spacer { flex: 1; }
+.topbar .demo-toggle { display: none; }           /* 只在手机上出现(见文件末尾的 ≤ 760 px 规则) */
 .clock { font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: .5px; }
 .clock small { font-size: 12px; font-weight: 500; color: var(--sub); margin-left: 6px; }
 
@@ -121,7 +124,7 @@ button { cursor: pointer; }
 .table td.actions { white-space: nowrap; }
 .table .players { white-space: normal; min-width: 180px; }
 .table .players .chip { margin: 1px 2px 1px 0; }
-.interval-row td { padding: 0 10px; border-bottom: none; font-size: 11.5px; color: var(--tertiary); line-height: 1.2; height: 14px; }
+.interval-row td { padding: 0 10px; border-bottom: none; font-size: 12.5px; color: var(--sub); line-height: 1.2; height: 15px; }
 .interval-row .warn { color: var(--red); font-weight: 600; }
 .table input[type=number], .table input[type=text] { width: 64px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 
@@ -161,11 +164,17 @@ button { cursor: pointer; }
 .strip .col { background: var(--fill); border-radius: var(--r-btn); padding: 8px 4px 6px; min-height: 92px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .strip .col.selected { outline: 2px solid var(--ink); }
 .strip .hole-no { font-weight: 800; font-size: 14px; line-height: 1; }
-.strip .par { font-size: 11px; color: var(--tertiary); line-height: 1; }
+.strip .par { font-size: 11px; color: var(--sub); line-height: 1; }
 .strip .dots { display: flex; flex-direction: column; gap: 7px; align-items: center; margin-top: 2px; }
 .strip .dots .pin { cursor: pointer; }
 .strip .count { font-size: 11px; color: var(--sub); }
-@media (max-width: 760px) { .strip { grid-template-columns: repeat(9, minmax(36px, 1fr)); } .strip .col { min-height: 78px; } }
+.strip .par .par-short { display: none; }
+@media (max-width: 760px) {
+  .strip { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 2px; overflow: visible; }   /* 9 × 2 行,不横向滚动,第 9 / 18 洞不被裁掉 */
+  .strip .col { min-height: 78px; padding: 6px 1px 6px; min-width: 0; }
+  .strip .par .par-full { display: none; }
+  .strip .par .par-short { display: inline; }
+}
 
 /* 巡查建议 */
 .marshal-row {
@@ -193,7 +202,7 @@ button { cursor: pointer; }
 .role-pick .role { padding: 16px 12px; border-radius: var(--r-card); background: #fff; border: 1px solid var(--line); text-align: center; font-weight: 700; cursor: pointer; }
 .role-pick .role.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .stars { display: inline-flex; gap: 4px; }
-.stars button { background: none; border: none; font-size: 26px; line-height: 1; color: var(--line); padding: 0 2px; }
+.stars button { background: none; border: none; font-size: 26px; line-height: 1; color: var(--line); padding: 0 2px; min-width: 44px; min-height: 44px; }
 .stars button.on { color: var(--ink); }
 .tags { display: flex; gap: 6px; flex-wrap: wrap; }
 
@@ -208,3 +217,118 @@ button { cursor: pointer; }
 /* 页脚 */
 .foot { color: var(--tertiary); font-size: 12.5px; text-align: center; padding: 28px 16px 36px; line-height: 2; }
 .foot a:hover { color: var(--ink); }
+
+/* ---------- UI.dot 补充(ui.js)---------- */
+/* UI.dot 的文字本身带「● 红 / ● 黄 / ○ 被阻」标记(SPEC §9.0),不再叠加 ::before 圆点,避免出现两个圆。 */
+.dot::before { display: none; }
+.dot { padding-left: 8px; }
+
+/* ---------- 球场端控制台 index.html 专用(追加)---------- */
+.stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.stat { background: var(--fill); border-radius: var(--r-btn); padding: 7px 14px; font-size: 13px; color: var(--sub); white-space: nowrap; }
+.stat b { color: var(--ink); font-size: 16px; font-variant-numeric: tabular-nums; }
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; }
+.demo-ctl { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--sub); }
+.demo-ctl label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.demo-ctl select, .demo-ctl input[type=time], .demo-ctl input[type=number] { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); }
+#mode-banner { margin-top: 12px; }
+#field-banner .banner { margin-top: 10px; }
+.hint { font-size: 12.5px; color: var(--sub); font-weight: 400; }
+.warn-text { color: var(--red); font-weight: 600; }
+.cell-stack { display: flex; flex-direction: column; gap: 3px; line-height: 1.35; align-items: flex-start; }
+.table td.pos { white-space: normal; min-width: 170px; }
+.table td.proj, .table span.proj { color: var(--sub); }
+.table tr.row-next td { background: #fff; }
+.table tr.row-next td:first-child { box-shadow: inset 3px 0 0 var(--ink); }
+.table tr.cur td { background: var(--fill); }
+.mchips { letter-spacing: 1px; color: var(--ink); font-size: 12px; }
+.pinbtn { background: none; border: none; padding: 3px; line-height: 0; border-radius: 50%; }
+.pinbtn.sel { outline: 2px solid var(--ink); outline-offset: 1px; }
+.slot { display: flex; justify-content: space-between; gap: 10px; align-items: center; width: 100%; text-align: left;
+        padding: 10px 12px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-btn); margin-bottom: 8px; cursor: pointer; font-size: 13.5px; }
+.slot:hover { border-color: var(--ink); }
+.slot .t { font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; min-width: 56px; }
+.slot .grow { flex: 1; }
+.slot-finder { margin-top: 10px; }
+.player-rows .form-row { margin-bottom: 6px; }
+.player-rows input[type=text] { flex: 1; min-width: 120px; }
+.event-list { font-size: 12.5px; color: var(--sub); max-height: 170px; overflow: auto; line-height: 1.7; }
+.drawer .kv { font-size: 13.5px; padding: 5px 0; }
+.drawer .table-wrap { margin-top: 10px; }
+.drawer h4 { font-size: 13.5px; font-weight: 700; margin: 12px 0 6px; }
+.card .form-row label { min-width: 120px; }
+.card .form-row input[type=number] { width: 88px; }
+.topbar .muted { font-size: 13.5px; white-space: nowrap; }
+.topbar .brand .sep { margin: 0 2px; }
+@media (max-width: 760px) {
+  .topbar .clock { font-size: 18px; }
+  .card .form-row label { min-width: 96px; }
+}
+.grid > * { min-width: 0; }   /* 网格项不得被内部表格撑宽(手机端无横向滚动) */
+
+/* ---------- 集成修正(追加)---------- */
+/* 巡查行:信息区 + 操作区各自成组,操作按钮整体换行,不再拆成两行 */
+.marshal-row .grow { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.marshal-row .acts { display: inline-flex; gap: 6px; flex-wrap: nowrap; margin-left: auto; }
+/* 被前组阻挡的圆点:虚线边要看得见;会员(实心黑)用外圈虚线表达 */
+.pin.hollow { border: 2px dashed var(--sub); background: #fff; }
+.pin.member.hollow { background: var(--ink); border: 1.5px solid #fff; outline: 2px dashed var(--sub); outline-offset: 1px; }
+.pin.member.hollow.mine { outline-style: solid; outline-color: var(--ink); }
+
+/* ---------- 手机端(≤ 760 px):顶栏收起演示控制、发球表改为卡片行 ---------- */
+@media (max-width: 760px) {
+  .topbar { position: static; }                                   /* 不再吸顶:168 px 的顶栏会永久遮住 20% 屏幕 */
+  .topbar-inner { padding: 8px 16px; gap: 8px; flex-wrap: nowrap; min-width: 0; }
+  .topbar .brand { font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .demo-toggle { padding: 5px 9px; }
+  .topbar #course-name, .topbar #sheet-date, .topbar .clock small { display: none; }
+  .topbar .demo-toggle { display: inline-flex; }
+  .topbar .demo-ctl { display: none; }                            /* 跳到 / 自动开球 / 重置 收进「更多」开关里;速度选择保留在顶栏 */
+  .topbar .demo-ctl.demo-speed-wrap { display: inline-flex; }
+  .topbar .demo-speed-wrap label { font-size: 0; }                /* 手机上只留下拉框,不显示「速度」二字 */
+  .topbar .demo-speed-wrap select { font-size: 13px; min-height: 34px; }
+  .topbar.demo-open .demo-ctl {
+    display: flex; flex-basis: 100%; order: 10; padding-top: 8px; border-top: 1px solid var(--line); margin-top: 6px;
+  }
+  .topbar.demo-open .topbar-inner { flex-wrap: wrap; }
+
+  /* 发球表:每条预订一张卡 —— 第 1 行 时间 + 人数 + 状态,第 2 行 球员,第 3 行 预警 + 场上 / 提示,第 4 行 操作 */
+  .table.sheet thead { display: none; }
+  .table.sheet, .table.sheet tbody { display: block; width: 100%; }
+  .table.sheet tr[data-testid="sheet-row"] { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .table.sheet tr[data-testid="sheet-row"] td { display: block; padding: 0; border: none; white-space: normal; min-width: 0; }
+  .table.sheet td.c-time, .table.sheet td.c-group, .table.sheet td.c-status { flex: 0 0 auto; }
+  .table.sheet td.c-status { margin-left: auto; }
+  /* 第 1 行:时间 + 人数 + 状态(状态靠右);第 2 行球员;第 3 行预警 + 位置;第 4 行操作 */
+  .table.sheet td.c-time { order: 1; } .table.sheet td.c-group { order: 2; } .table.sheet td.c-status { order: 3; }
+  .table.sheet td.c-players { order: 4; } .table.sheet td.c-alert { order: 5; } .table.sheet td.c-pos { order: 6; } .table.sheet td.c-actions { order: 7; }
+  .table.sheet td.c-status .cell-stack { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+  .table.sheet td.c-players, .table.sheet td.c-actions { flex: 1 0 100%; }
+  .table.sheet td.c-alert { flex: 0 1 auto; }
+  .table.sheet td.c-pos { flex: 1 1 140px; }
+  .table.sheet td.c-time .cell-stack { flex-direction: row; align-items: baseline; gap: 6px; }
+  .table.sheet td.c-time b { font-size: 17px; }
+  .table.sheet td.c-pos .cell-stack { align-items: flex-start; }
+  .table.sheet td.c-actions .btn { min-height: 36px; }
+  .table.sheet td.c-actions:empty, .table.sheet td.c-alert:empty { display: none; }
+  .table.sheet tr.row-next { box-shadow: inset 3px 0 0 var(--ink); }
+  .table.sheet tr.row-next td:first-child { box-shadow: none; }
+  .table.sheet tr.sel td { background: transparent; }
+  .table.sheet tr.sel { background: var(--fill); }
+  .table.sheet tr.interval-row { display: block; }
+  .table.sheet tr.interval-row td { display: block; padding: 2px 12px; height: auto; }
+  .table-wrap.sheet-wrap { overflow: visible; }
+  .pos-line { font-size: 13.5px; }
+}
+/* 建议开球 / 还需等:出发台要在远处看清 */
+.pos-line { font-size: 13.5px; color: var(--sub); }
+
+/* 可横向滚动的表格:手机上给出「左右滑动」提示 */
+.table-wrap { position: relative; }
+.table-wrap.scrollable::after {
+  content: "← 左右滑动查看更多 →"; display: block; text-align: center; font-size: 12px; color: var(--sub); padding: 4px 0 6px;
+  border-top: 1px solid var(--line); background: var(--fill);
+}
+
+/* 存储已满横幅 */
+.banner.storage-warn { border: 1px solid var(--red); background: #fff; color: var(--ink); }

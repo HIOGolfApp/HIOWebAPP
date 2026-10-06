@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>我的球组 — 一杆高尔夫</title>
+<meta name="description" content="一杆高尔夫球场端 Tee Time 模块：球员 / 球童实时页（本洞剩余时间、场上位置、让行建议、并组邀请、评分）。">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="stylesheet" href="css/tee.css">
+<style>
+  /* live.html 专用:手机优先的单列布局,桌面居中 .phone 列(共用组件见 css/tee.css) */
+  .topbar-inner { max-width: 480px; }
+  .phone { padding-top: 12px; }
+  .section-title { font-size: 12.5px; font-weight: 700; letter-spacing: 2px; color: var(--tertiary); margin: 20px 0 8px; }
+  .section-title:first-child { margin-top: 0; }
+  .me-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .me-head .t { font-weight: 800; font-size: 16px; }
+  .me-head .meta { color: var(--sub); font-size: 13px; }
+  .me-players { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 10px 0 4px; }
+  .me-players .me-badge { font-size: 11px; color: var(--sub); border: 1px solid var(--line); background: #fff; border-radius: 4px; padding: 0 5px; line-height: 1.5; }
+  .me-caddie { font-size: 13px; color: var(--sub); }
+  .hero { padding: 14px 0 6px; }
+  .hero .eyebrow { font-size: 13px; color: var(--sub); }
+  .hero .sub { margin-top: 6px; font-size: 15px; font-weight: 600; }
+  .hero .sub.over { color: var(--red); }
+  .hero .sub .num { font-weight: 800; }
+  .status-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; color: var(--sub); margin-top: 10px; }
+  .status-line .dot { font-size: 12.5px; }
+  .neighbors { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--sub); margin-top: 8px; }
+  .neighbors b { color: var(--ink); font-weight: 600; }
+  .evt-row { display: flex; gap: 8px; margin-top: 12px; }
+  .evt-row .btn { flex: 1; }
+  .evt-hint { font-size: 12.5px; color: var(--sub); margin-top: 6px; }
+  .card.pt { border: 1px solid var(--ink); background: #fff; }
+  .card.pt h3 { display: flex; align-items: center; gap: 8px; }
+  .card.pt p { font-size: 14px; color: var(--sub); margin-bottom: 10px; }
+  .card.pt .btn { flex: 1; }
+  .card.done { background: #fff; border: 1px solid var(--line); }
+
+  /* 场上位置条:9 × 2(前九 / 后九),不横向滚动 */
+  .phone .strip { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; overflow: visible; }
+  .phone .strip .col { min-height: 80px; padding: 6px 1px 6px; gap: 4px; }
+  .phone .strip .col.mine-col { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .phone .strip .hole-no { font-size: 13px; }
+  .phone .strip .par { font-size: 10px; }
+  .pg { display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 10.5px; line-height: 1.25; color: var(--sub); text-align: center; }
+  .pg .cnt { white-space: nowrap; }
+  .pg .fr { color: var(--ink); font-weight: 600; word-break: break-all; }
+  .pg .mv { color: var(--sub); }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--sub); margin-top: 10px; line-height: 1.5; }
+  .legend .pin { width: 11px; height: 11px; vertical-align: -1px; margin-right: 3px; }
+  .legend .pin.mine { outline-width: 1.5px; outline-offset: 1.5px; }
+
+  /* 并组邀请 */
+  .invite { background: #fff; border: 1px solid var(--line); border-radius: var(--r-card); padding: 14px 16px; margin-bottom: 10px; }
+  .invite .times { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; margin: 6px 0; }
+  .invite .times .arrow { color: var(--tertiary); font-weight: 400; }
+  .invite p { font-size: 13.5px; color: var(--sub); }
+  .invite .state { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 6px; background: var(--fill); color: var(--sub); margin-top: 6px; }
+  .invite .actions-row { margin-top: 10px; }
+  .invite .actions-row .btn { flex: 1; }
+
+  /* 评分 */
+  .ratee-pick { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  /* 点击目标 ≥ 44 px(星) / ≥ 40 px(标签、被评人页签) */
+  .ratee-pick .tab { padding: 10px 14px; min-height: 40px; background: #fff; border: 1px solid var(--line); color: var(--ink); }
+  .ratee-pick .tab.on { background: #fff; color: var(--ink); border-color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }  /* 选中用下划线,不用黑底(黑底 = 会员) */
+  .ratee-pick .tab .rated { color: var(--sub); font-weight: 400; margin-left: 4px; }
+  .rating-form .chip.toggle { padding: 10px 14px; min-height: 40px; }
+  .rating-form .stars { margin: 4px 0 8px; }
+  .rating-form .stars button { font-size: 30px; min-width: 44px; min-height: 44px; }
+  .rating-form .tags { margin-bottom: 10px; }
+  .rating-form textarea { width: 100%; min-height: 64px; resize: vertical; padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--r-btn); background: #fff; outline: none; }
+  .rating-form textarea:focus { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .privacy-note { font-size: 12.5px; color: var(--sub); display: flex; align-items: center; gap: 6px; margin: 8px 0 4px; }
+  .my-ratings { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .my-ratings .row { font-size: 13.5px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .my-ratings .row:last-child { border-bottom: none; }
+  .my-ratings .row .s { letter-spacing: 1px; font-weight: 700; }
+  .my-ratings .row .c { color: var(--sub); }
+
+  /* 注册 */
+  .register h2 { font-size: 22px; font-weight: 800; margin: 6px 0 4px; }
+  .register p.lead { color: var(--sub); font-size: 14px; margin-bottom: 8px; }
+  .register .form-row label { min-width: 72px; }
+  .register .form-row input { flex: 1; }
+  .register .demo-enter { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .register .demo-enter .btn { margin: 4px 6px 4px 0; }
+
+  /* 演示控制 */
+  .demo-tools .form-row { margin-bottom: 0; }
+  .demo-tools select { padding: 8px 10px; min-height: 40px; }
+  .demo-tools .btn-sm { min-height: 40px; padding: 8px 14px; }
+  .foot .btn-link, .foot a { background: none; border: none; color: var(--sub); font-size: 12.5px; padding: 10px 8px; display: inline-block; }
+  .foot .btn-link:hover { color: var(--ink); }
+  .foot .sep { margin: 0 6px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">
+      <svg width="15" height="26" viewBox="0 0 31.7613 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <ellipse cx="15.8806" cy="51.8209" rx="15.8806" ry="4.1791" fill="#111"/>
+        <path d="M11.7 4.83433C11.7 4.64968 11.8497 4.5 12.0343 4.5H19.7657C19.9503 4.5 20.1 4.64968 20.1 4.83433V49H11.7V4.83433Z" fill="#111"/>
+        <path d="M16.3758 7.79297C16.207 8.44227 15.9892 9.07951 15.7215 9.69824C15.0113 11.3393 13.9722 12.8179 12.6687 14.042C11.3653 15.266 9.82471 16.2098 8.14238 16.8154C7.50783 17.0439 6.85788 17.2209 6.19902 17.3486L6.31523 15.5127C6.72993 15.4145 7.14013 15.2953 7.54277 15.1504C8.9978 14.6265 10.3305 13.8106 11.4578 12.752C12.585 11.6934 13.4833 10.4152 14.0975 8.99609C14.2674 8.60329 14.4119 8.20075 14.5359 7.79297H16.3758Z" stroke="#CB0018" stroke-width="6.58576"/>
+        <circle cx="9.44478" cy="48.4776" r="4.1791" fill="#EAEAEA"/>
+      </svg>
+      一杆高尔夫 <span class="sep">·</span> 我的球组
+    </a>
+    <span class="spacer"></span>
+    <span class="clock num" id="clock" aria-live="off">--:--</span>
+  </div>
+</header>
+
+<main class="phone" id="app">
+  <div id="banner"></div>
+
+  <!-- 注册(无 ClientProfile 时) -->
+  <section class="register hidden" id="screen-register" data-testid="register-form" aria-label="注册">
+    <h2>欢迎来到球场</h2>
+    <p class="lead">选择身份后进入今天的球组。正式版使用一杆高尔夫账号登录。</p>
+    <div class="role-pick" role="radiogroup" aria-label="我的身份">
+      <button type="button" class="role on" data-testid="role-player" data-role="player" role="radio" aria-checked="true">我是球员</button>
+      <button type="button" class="role" data-testid="role-caddie" data-role="caddie" role="radio" aria-checked="false">我是球童</button>
+    </div>
+    <div class="card">
+      <div class="form-row">
+        <label for="reg-name">姓名</label>
+        <input id="reg-name" type="text" class="input" placeholder="与预订登记的姓名一致" autocomplete="name" maxlength="20">
+      </div>
+      <div class="form-row hidden" id="reg-caddie-row">
+        <label for="reg-caddie-no">球童编号</label>
+        <input id="reg-caddie-no" type="text" class="input" inputmode="numeric" placeholder="例如 17" maxlength="6">
+      </div>
+      <div class="actions-row">
+        <button type="button" class="btn btn-primary btn-block" id="reg-submit">进入我的球组</button>
+      </div>
+      <p class="tiny" id="reg-error" role="alert"></p>
+      <div class="demo-enter hidden" id="reg-demo">
+        <div class="tiny">演示模式：也可以直接用演示身份进入</div>
+        <button type="button" class="btn btn-secondary btn-sm" data-act="demo-persona" data-role="player">演示球员（08:00 球组）</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-act="demo-persona" data-role="caddie">演示球童（17 号）</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 主屏 -->
+  <section class="hidden" id="screen-main">
+    <div class="section-title">我的球组</div>
+    <div class="card" id="my-group" data-testid="my-group-card"></div>
+    <div id="playthrough"></div>
+    <div id="events"></div>
+
+    <div class="section-title">场上位置</div>
+    <div class="card" id="strip-card">
+      <div id="strip"></div>
+    </div>
+
+    <div id="proposals"></div>
+    <div id="rating"></div>
+    <div id="demo-tools"></div>
+  </section>
+
+  <footer class="foot" id="foot"></footer>
+</main>
+
+<script src="js/course.js"></script>
+<script src="js/pace.js"></script>
+<script src="js/learn.js"></script>
+<script src="js/live.js"></script>
+<script src="js/merge.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script>
+(function () {
+  'use strict';
+  const Store = HIOTee.Store, UI = HIOTee.UI, Course = HIOTee.Course;
+  const esc = UI.esc, hm = UI.hm;
+  const POLL_MS = 15000;                       // API 模式轮询间隔(后台页签隔次跳过 → 30 s)
+  const CLIENT_KEY = Store.PREFIX + 'client';
+  const DEMO_GROUP = 'b0800';                 // 演示身份所在球组(Store.demoSeed:08:00 组,球童 17)
+
+  // 评分标签:球员评球童 / 球童评球员
+  const TAGS = {
+    caddie: ['专业', '友善', '耐心', '熟悉球场', '服务周到', '守时'],
+    player: ['守时', '友善', '礼貌', '专业', '爱护球场', '慢打']
+  };
+  const PROPOSAL_TEXT = {
+    proposed: '等待您的回复', accepted_a: '', accepted_b: '', confirmed: '双方已同意，等待球场确认',
+    applied: '已合并', declined: '已拒绝', expired: '已过期', withdrawn: '球场已撤回'
+  };
+
+  let store = null;
+  let snap = null;            // clientSnapshot()
+  let proposals = [];         // clientProposals()
+  let rendering = false, pendingRender = false;
+  let pollTimer = null, pollSkip = false;
+  let mergedFollowed = null;  // 已跟随到的合并目标 bookingId(避免重复注册)
+  const ui = { regRole: 'player', ratee: null, draft: { stars: 0, tags: [], comment: '' }, draftKey: null };
+
+  // ---------- 小工具 ----------
+  function qs(id) { return document.getElementById(id); }
+  function show(id, on) { const el = qs(id); if (el) el.classList.toggle('hidden', !on); }
+  function blurActive() { const a = document.activeElement; if (a && a !== document.body && typeof a.blur === 'function') a.blur(); }
+  function query() {
+    const out = {};
+    const q = (location.search || '').replace(/^\?/, '');
+    if (!q) return out;
+    q.split('&').forEach(function (kv) {
+      const i = kv.indexOf('=');
+      const k = decodeURIComponent(i < 0 ? kv : kv.slice(0, i)).trim();
+      const v = decodeURIComponent(i < 0 ? '' : kv.slice(i + 1).replace(/\+/g, ' ')).trim();
+      if (k) out[k] = v;
+    });
+    return out;
+  }
+  function isLocal() { return !!(store && store.mode === 'local'); }
+  function me() { const st = store && store.getState(); return st ? st.me : null; }
+  function myBooking(st) {
+    const m = st.me;
+    if (!m || m.bookingId == null) return null;
+    for (let i = 0; i < st.bookings.length; i++) if (st.bookings[i].id === m.bookingId) return st.bookings[i];
+    return null;
+  }
+  function holeNoAt(idx) {
+    if (!snap || !snap.holes || idx == null || idx < 0 || idx >= snap.holes.length) return null;
+    return snap.holes[idx].no;
+  }
+  function errMsg(e) { return (e && e.message) ? e.message : '操作失败'; }
+  function stars(n) { let s = ''; for (let i = 1; i <= 5; i++) s += i <= n ? '★' : '☆'; return s; }
+
+  // ---------- 渲染:顶栏 / 横幅 ----------
+  function renderTop(st) {
+    const clock = qs('clock');
+    if (clock) {
+      const t = (st.now != null && isFinite(st.now)) ? hm(st.now) : '--:--';
+      clock.innerHTML = esc(t) + (isLocal() ? '<small>演示</small>' : '');
+    }
+    // 客户端不说「后端不可达」这类技术话:演示 / 回退一律显示为演示数据
+    const text = isLocal() ? '演示数据（非正式）' : (st.banner || Store.BANNER.api);
+    UI.setRegion('banner', '<div class="banner" data-testid="mode-banner"><b>' + esc(text) + '</b>' +
+      (isLocal() ? '<span>演示模式：数据为本地模拟</span>' : '') +
+      (st.storageError ? '<span>本机存储已满，演示进度不再保存</span>' : '') + '</div>');
+  }
+
+  // ---------- 渲染:我的球组卡片 ----------
+  function phaseText(m, b, st) {
+    // 返回 { eyebrow, big, sub, over }
+    const now = snap.now;
+    if (b && (b.status === 'noShow' || b.status === 'cancelled')) {
+      return { eyebrow: '今天的预订', big: b.status === 'noShow' ? '标记未到' : '已取消', sub: '如有疑问请联系出发台' };
+    }
+    if (m.phase === 'done' || (b && b.status === 'finished')) {
+      let sub = '辛苦了，欢迎评价本次服务';
+      if (b && isFinite(b.finishedAt) && isFinite(b.teeOffActual)) sub = '全程 ' + Course.fmtDur(b.finishedAt - b.teeOffActual) + ' · ' + hm(b.finishedAt) + ' 完赛';
+      return { eyebrow: '今天的球局', big: '已完成', sub: sub };
+    }
+    if (m.phase === 'playing') {
+      const par = snap.holes[m.holeIdx] ? ' · Par ' + snap.holes[m.holeIdx].par : '';
+      const over = m.overMin != null && m.overMin >= 0.5;
+      const n = '<span class="num">' + Math.max(1, Math.round(m.overMin || 0)) + '</span>';
+      let sub;
+      if (!over) sub = (m.remainingMin != null && m.remainingMin < 0.5) ? '本洞即将完成' : '本洞还剩 ' + esc(UI.fmtMinutes(m.remainingMin));
+      else if (m.cause === 'AHEAD') sub = '本洞超出标准 ' + n + ' 分钟（等待前组通过）';     // 被前组阻挡:不是本组的超时,不用红字
+      else if (m.level === 'red' || m.level === 'yellow') sub = '本洞已超时 ' + n + ' 分钟';
+      else sub = '本洞超出标准 ' + n + ' 分钟';
+      return { eyebrow: '正在打' + par, big: '第 ' + m.holeNo + ' 洞', sub: sub, over: over && m.level === 'red' };   // 红字只给红色预警
+    }
+    if (m.phase === 'between') {
+      const eta = (m.remainingMin != null) ? hm(now + m.remainingMin) : '--:--';
+      return { eyebrow: '转场中', big: '前往第 ' + m.holeNo + ' 洞', sub: '预计 <span class="num">' + esc(eta) + '</span> 开球' };
+    }
+    // notStarted
+    const tee = m.teeMin != null ? hm(m.teeMin) : '--:--';
+    const eta = m.nextTeeEta != null ? hm(m.nextTeeEta) : tee;
+    let sub = '预计 <span class="num">' + esc(eta) + '</span> 开球';
+    if (b && b.status === 'booked') sub += ' · 请到出发台签到';
+    return { eyebrow: '今天的开球时间', big: tee, sub: sub };
+  }
+
+  function renderMyGroup(st) {
+    const m = snap.me;
+    const b = myBooking(st);
+    const meProfile = st.me;
+    if (!b && !m.players.length) {
+      UI.setRegion('my-group',
+        '<div class="me-head"><span class="t">' + esc(meProfile.name) + (meProfile.role === 'caddie' ? '（球童 ' + esc(meProfile.caddieNo || '') + '）' : '') + '</span></div>' +
+        '<div class="hero"><div class="big" style="font-size:28px;font-weight:800">今天没有您的球组</div>' +
+        '<div class="sub muted">请确认预订姓名，或在出发台登记后刷新</div></div>');
+      return;
+    }
+    const pt = phaseText(m, b, st);
+    const onCourse = m.phase === 'playing' || m.phase === 'between';
+    let html = '<div class="me-head"><span class="t">' + (m.teeMin != null ? '<span class="num">' + esc(hm(m.teeMin)) + '</span> 开球' : '我的球组') + '</span>' +
+      '<span class="meta">' + (b ? b.size + ' 人 ' + UI.statusChip(b.status) : '') + '</span></div>';
+    // 本组成员(自己的球组,允许显示姓名与会员身份)
+    html += '<div class="me-players">' + m.players.map(function (p) {
+      return UI.chipPlayer(p) + (p.isMe ? '<span class="me-badge">我</span>' : '');
+    }).join('') + '</div>';
+    if (m.caddies && m.caddies.length) {
+      html += '<div class="me-caddie">球童 ' + m.caddies.map(function (c) {
+        return (c.no != null ? esc(c.no) + ' 号' : '') + (c.name ? ' ' + esc(c.name) : '');
+      }).join('、') + (meProfile.role === 'caddie' ? '（我）' : '') + '</div>';
+    }
+    html += '<div class="hero"><div class="eyebrow">' + esc(pt.eyebrow) + '</div><div class="big">' + esc(pt.big) + '</div>' +
+      '<div class="sub' + (pt.over ? ' over' : '') + '">' + pt.sub + '</div></div>';
+
+    if (onCourse) {
+      // 预警:点 + 文字(从不只靠颜色)
+      const dot = UI.dot(m.level, m.cause, m.lag);
+      let say;
+      if (m.level === 'red') say = '已超时 ' + Math.round(m.lag) + ' 分钟，请加快节奏';
+      else if (m.level === 'yellow') say = '已超时，请注意节奏';
+      else if (m.cause === 'AHEAD') say = '被前组阻挡，不计入本组超时';
+      else say = '步速正常';
+      html += '<div class="status-line">' + dot + '<span>' + esc(say) + '</span>' +
+        (m.etaRoundMin != null ? '<span class="muted" style="white-space:nowrap">预计 <span class="num">' + esc(hm(snap.now + m.etaRoundMin)) + '</span> 完赛</span>' : '') + '</div>';
+      const nb = [];
+      if (snap.aheadGroup && snap.aheadGroup.holeNo != null) nb.push('前组在<b>第 ' + snap.aheadGroup.holeNo + ' 洞</b>' + (snap.aheadGroup.phase === 'between' ? '（转场中）' : ''));
+      else nb.push('前方<b>无球组</b>');
+      if (snap.behindGroup && snap.behindGroup.size != null) nb.push('后组 <b>' + snap.behindGroup.size + ' 人</b>' + (m.behindWaiting ? '<b>正在等候</b>' : ''));
+      html += '<div class="neighbors">' + nb.map(function (s) { return '<span>' + s + '</span>'; }).join('') + '</div>';
+      if (m.teeDelay != null && m.teeDelay >= 1) html += '<div class="tiny" style="margin-top:6px">延迟开球 ' + Math.round(m.teeDelay) + ' 分钟（不计入步速）</div>';
+    }
+    UI.setRegion('my-group', html);
+  }
+
+  // ---------- 渲染:让行建议 ----------
+  function renderPlayThrough(st) {
+    const m = snap.me;
+    const pt = m.playThrough || null;
+    const onCourse = m.phase === 'playing' || m.phase === 'between';
+    let html = '';
+    if (onCourse && pt && pt.decision === 'accepted' && pt.fromHoleIdx != null && m.holeIdx <= pt.fromHoleIdx) {
+      const no = holeNoAt(pt.fromHoleIdx);
+      html = '<div class="card done"><h3>已让行</h3><p class="muted" style="font-size:14px">后组将在第 ' + (no != null ? no : pt.fromHoleIdx + 1) + ' 洞先打，请在发球台稍候。谢谢配合！</p></div>';
+    } else if (onCourse && m.playThroughSuggested && !(pt && pt.decision && pt.suggestedAt != null && pt.decidedAt >= pt.suggestedAt)) {
+      const nextNo = m.phase === 'playing' ? holeNoAt(m.holeIdx + 1) : m.holeNo;
+      html = '<div class="card pt" role="region" aria-label="让行建议"><h3>' + UI.dot('red', 'OWN', m.lag) + '建议让后组先打</h3>' +
+        '<p>后组' + (snap.behindGroup && snap.behindGroup.size != null ? '（' + snap.behindGroup.size + ' 人）' : '') + '正在等候，建议' +
+        (nextNo != null ? '在第 ' + nextNo + ' 洞' : '下一洞') + '让后组先过，可缓解整场拥堵。</p>' +
+        '<div class="actions-row"><button type="button" class="btn btn-primary" data-act="pt" data-decision="accepted">已让行</button>' +
+        '<button type="button" class="btn btn-secondary" data-act="pt" data-decision="ignored">忽略</button></div></div>';
+    }
+    UI.setRegion('playthrough', html);
+  }
+
+  // ---------- 渲染:事件按钮 ----------
+  function renderEvents(st) {
+    const m = snap.me;
+    const b = myBooking(st);
+    if (!b || b.status === 'finished' || b.status === 'noShow' || b.status === 'cancelled' || b.status === 'merged' || m.phase === 'done') {
+      UI.setRegion('events', '');
+      return;
+    }
+    const role = st.me.role === 'caddie' ? 'caddie' : 'player';
+    let teeNo = null, greenNo = null;
+    if (m.phase === 'notStarted') teeNo = snap.holes.length ? snap.holes[0].no : null;
+    else if (m.phase === 'between') teeNo = m.holeNo;
+    else if (m.phase === 'playing') greenNo = m.holeNo;
+    const html = '<div class="evt-row">' +
+      '<button type="button" class="btn btn-secondary" data-act="evt" data-type="teeOff" data-hole="' + (teeNo != null ? teeNo : '') + '"' + (teeNo == null ? ' disabled' : '') + '>已开球' + (teeNo != null ? '（第 ' + teeNo + ' 洞）' : '') + '</button>' +
+      '<button type="button" class="btn btn-secondary" data-act="evt" data-type="leaveGreen" data-hole="' + (greenNo != null ? greenNo : '') + '"' + (greenNo == null ? ' disabled' : '') + '>已离开果岭' + (greenNo != null ? '（第 ' + greenNo + ' 洞）' : '') + '</button>' +
+      '</div><div class="evt-hint">' + (role === 'caddie' ? '球童上报的进度用于全场实时场况与步速统计' : '手动上报进度；正式版由 App 记分卡自动记录') + '</div>';
+    UI.setRegion('events', html);
+  }
+
+  // ---------- 渲染:场上位置条(只用 clientSnapshot 的数据) ----------
+  function renderStrip() {
+    const holes = snap.holes || [];
+    let cols = holes.map(function (h) {
+      const mine = h.groups.some(function (g) { return g.isMine; });
+      const groups = h.groups.map(function (g) {
+        const names = (g.friends || []).map(function (f) { return f.name; }).filter(Boolean);
+        const label = g.isMine ? '我的球组' : ('球组 ' + (g.size != null ? g.size + ' 人' : '')) + (g.phase === 'between' ? '，转场中' : '');
+        return '<div class="pg"><span class="pin' + (g.isMine ? ' mine' : '') + '" role="img" aria-label="' + esc(label) + '"></span>' +
+          '<span class="cnt">' + (g.isMine ? '我们' : (g.size != null ? g.size + ' 人' : '—')) + '</span>' +
+          (g.phase === 'between' ? '<span class="mv">转场</span>' : '') +
+          (names.length ? '<span class="fr">' + esc(names.join('、')) + '</span>' : '') + '</div>';
+      }).join('');
+      return '<div class="col' + (mine ? ' mine-col' : '') + '" aria-label="第 ' + h.no + ' 洞 Par ' + h.par + '，' + h.groups.length + ' 组"><div class="hole-no">' + h.no + '</div><div class="par">Par ' + h.par + '</div><div class="dots">' + groups + '</div></div>';
+    }).join('');
+    const total = holes.reduce(function (n, h) { return n + h.groups.length; }, 0);
+    const html = '<div class="strip" data-testid="position-strip" role="list">' + cols + '</div>' +
+      '<div class="legend"><span><span class="pin mine"></span>我的球组</span><span><span class="pin"></span>其他球组（只显示人数）</span><span>好友显示姓名</span><span class="muted">场上 ' + total + ' 组</span></div>';
+    UI.setRegion('strip', html);
+  }
+
+  // ---------- 渲染:并组邀请 ----------
+  function renderProposals(st) {
+    if (!proposals.length) { UI.setRegion('proposals', ''); return; }
+    const html = '<div class="section-title">并组邀请</div>' + proposals.map(function (p) {
+      const names = (p.other && p.other.friends || []).map(function (f) { return f.name; }).filter(Boolean);
+      const size = p.other && p.other.size != null ? p.other.size : '—';
+      const myAccepted = p.status === 'accepted_' + p.mySide;
+      const otherAccepted = p.status === 'accepted_' + (p.mySide === 'a' ? 'b' : 'a');
+      const open = p.status === 'proposed' || otherAccepted;
+      let state = PROPOSAL_TEXT[p.status] || p.status;
+      if (myAccepted) state = '您已同意，等待对方确认';
+      if (otherAccepted) state = '对方已同意，等待您的回复';
+      const sameTime = p.myTeeMin != null && p.newTeeMin != null && p.myTeeMin === p.newTeeMin;
+      return '<div class="invite" role="region" aria-label="并组邀请">' +
+        '<div class="muted" style="font-size:13px">球场建议将您的球组与另一组 <b>' + esc(size) + ' 人</b> 合并' + (names.length ? '，其中有您的好友 <b>' + esc(names.join('、')) + '</b>' : '') + '</div>' +
+        '<div class="times"><span class="num">' + esc(p.myTeeMin != null ? hm(p.myTeeMin) : '--:--') + '</span>' +
+        (sameTime ? '<span class="arrow" style="font-size:13px">开球时间不变</span>' : '<span class="arrow">→</span><span class="num">' + esc(p.newTeeMin != null ? hm(p.newTeeMin) : '--:--') + '</span>') + '</div>' +
+        '<p>并组后同组出发，可缩短全场等待。需双方同意后由球场确认；会员优先保留原时间。' + (p.expiresAt != null && open ? ' 请在 ' + esc(hm(p.expiresAt)) + ' 前回复。' : '') + '</p>' +
+        '<span class="state">' + esc(state) + '</span>' +
+        (open ? '<div class="actions-row"><button type="button" class="btn btn-primary" data-act="merge" data-id="' + esc(p.id) + '" data-side="' + esc(p.mySide) + '" data-decision="accept">同意</button>' +
+          '<button type="button" class="btn btn-secondary" data-act="merge" data-id="' + esc(p.id) + '" data-side="' + esc(p.mySide) + '" data-decision="decline">拒绝</button></div>' : '') +
+        '</div>';
+    }).join('');
+    UI.setRegion('proposals', html);
+  }
+
+  // ---------- 渲染:评分(完赛后;仅评分者可见) ----------
+  function rateeCandidates(st, b) {
+    const role = st.me.role === 'caddie' ? 'caddie' : 'player';
+    if (role === 'player') {
+      const dir = {};
+      (st.caddies || []).forEach(function (c) { dir[c.id] = c; });
+      return (b.caddieIds || []).map(function (id) {
+        const c = dir[id];
+        return { id: id, role: 'caddie', label: '球童 ' + (c && c.no != null ? c.no + ' 号' : '') + (c && c.name ? ' ' + c.name : '') };
+      });
+    }
+    return (b.players || []).map(function (p) { return { id: p.id, role: 'player', label: p.name || p.id }; });
+  }
+  function loadDraft(st, b, ratee) {
+    const key = b.id + '|' + ratee.id;
+    if (ui.draftKey === key) return;
+    ui.draftKey = key;
+    let existing = null;
+    (st.ratings || []).forEach(function (r) { if (r.bookingId === b.id && r.rateeId === ratee.id && r.raterId === st.me.userId) existing = r; });
+    ui.draft = existing ? { stars: existing.stars, tags: (existing.tags || []).slice(), comment: existing.comment || '' } : { stars: 0, tags: [], comment: '' };
+  }
+  function renderRating(st) {
+    const b = myBooking(st);
+    const finished = !!(b && b.status === 'finished') || snap.me.phase === 'done';
+    if (!b || !finished) { UI.setRegion('rating', ''); return; }
+    const cands = rateeCandidates(st, b);
+    let html = '<div class="section-title">评分</div><div class="card rating-form">';
+    html += '<div class="privacy-note">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>' +
+      '仅自己可见，对方不会看到</div>';
+    if (!cands.length) {
+      html += '<p class="muted" style="font-size:14px">' + (st.me.role === 'caddie' ? '本组没有可评价的球员' : '本组没有球童，无需评分') + '</p>';
+    } else {
+      if (!ui.ratee || !cands.some(function (c) { return c.id === ui.ratee; })) ui.ratee = cands[0].id;
+      const ratee = cands.filter(function (c) { return c.id === ui.ratee; })[0];
+      loadDraft(st, b, ratee);
+      if (cands.length > 1) {
+        const ratedStars = {};
+        (st.ratings || []).forEach(function (r) { if (r.bookingId === b.id && r.raterId === st.me.userId) ratedStars[r.rateeId] = r.stars; });
+        html += '<div class="ratee-pick" role="tablist">' + cands.map(function (c) {
+          const done = ratedStars[c.id] ? '<span class="rated" aria-label="已评 ' + ratedStars[c.id] + ' 星">★' + ratedStars[c.id] + '</span>' : '';
+          return '<button type="button" class="tab' + (c.id === ui.ratee ? ' on' : '') + '" role="tab" aria-selected="' + (c.id === ui.ratee) + '" data-act="ratee" data-id="' + esc(c.id) + '">' + esc(c.label) + done + '</button>';
+        }).join('') + '</div>';
+      } else {
+        html += '<div style="font-size:14px;margin-bottom:4px">评价 <b>' + esc(ratee.label) + '</b></div>';
+      }
+      html += '<div class="stars" role="radiogroup" aria-label="星级">';
+      for (let i = 1; i <= 5; i++) html += '<button type="button" class="' + (i <= ui.draft.stars ? 'on' : '') + '" data-act="star" data-n="' + i + '" role="radio" aria-checked="' + (i === ui.draft.stars) + '" aria-label="' + i + ' 星">' + (i <= ui.draft.stars ? '★' : '☆') + '</button>';
+      html += '</div>';
+      html += '<div class="tags">' + TAGS[ratee.role].map(function (t) {
+        const on = ui.draft.tags.indexOf(t) >= 0;
+        return '<button type="button" class="chip toggle' + (on ? ' on' : '') + '" data-act="tag" data-tag="' + esc(t) + '" aria-pressed="' + on + '">' + esc(t) + '</button>';
+      }).join('') + '</div>';
+      html += '<textarea id="rate-comment" placeholder="备注（选填）" maxlength="200">' + esc(ui.draft.comment) + '</textarea>';
+      html += '<div class="actions-row" style="margin-top:10px"><button type="button" class="btn btn-primary" data-act="rate-submit" data-ratee="' + esc(ratee.id) + '" data-ratee-role="' + esc(ratee.role) + '">提交评分</button></div>';
+    }
+    // 我给出的评分
+    const mine = (st.ratings || []).filter(function (r) { return r.raterId === st.me.userId; });
+    if (mine.length) {
+      const labelOf = {};
+      cands.forEach(function (c) { labelOf[c.id] = c.label; });
+      html += '<div class="my-ratings"><div class="tiny">我给出的评分</div>' + mine.map(function (r) {
+        const who = labelOf[r.rateeId] || (r.rateeRole === 'caddie' ? '球童' : '球员');
+        return '<div class="row"><span class="s">' + stars(r.stars) + '</span> ' + esc(who) +
+          ((r.tags || []).length ? ' <span class="c">· ' + esc(r.tags.join(' · ')) + '</span>' : '') +
+          (r.comment ? ' <span class="c">· ' + esc(r.comment) + '</span>' : '') +
+          (r.bookingId !== b.id ? ' <span class="tiny">' + esc(r.date || '') + '</span>' : '') + '</div>';
+      }).join('') + '</div>';
+    }
+    html += '</div>';
+    UI.setRegion('rating', html);
+  }
+
+  // ---------- 渲染:演示控制 / 页脚 ----------
+  function renderDemoTools(st) {
+    if (!isLocal() || !store.demo) { UI.setRegion('demo-tools', ''); return; }
+    const d = store.demo;
+    const leader = d.isLeader();
+    const html = '<div class="section-title">演示</div><div class="card demo-tools"><div class="form-row">' +
+      '<label for="demo-speed">时钟</label><span class="num" style="font-weight:700">' + esc(hm(st.now)) + '</span>' +
+      '<select id="demo-speed" aria-label="演示速度"' + (leader ? '' : ' disabled') + '>' + [1, 10, 60].map(function (x) {
+        return '<option value="' + x + '"' + (Number(d.speed) === x ? ' selected' : '') + '>×' + x + '</option>';
+      }).join('') + '</select>' +
+      '<button type="button" class="btn btn-sm" data-act="ff" data-min="30"' + (leader ? '' : ' disabled') + '>快进 30 分</button></div>' +
+      '<div class="tiny" style="margin-top:6px">' + (leader ? '本页正在驱动演示时钟' : '演示时钟由球场端控制台驱动，本页跟随显示') + '</div></div>';
+    UI.setRegion('demo-tools', html);
+  }
+  function renderFoot(st) {
+    const html = '<div>' +
+      (st.me ? '<button type="button" class="btn-link" data-act="switch">切换身份</button><span class="sep">·</span>' : '') +
+      (isLocal() ? '<button type="button" class="btn-link" data-act="reset">重置演示</button><span class="sep">·</span>' : '') +
+      '<a href="index.html">球场端控制台</a></div>' +
+      '<div>© 2026 佛山小白球科技有限责任公司 · 一杆高尔夫 HIO Golf</div>';
+    UI.setRegion('foot', html);
+  }
+
+  // ---------- 渲染入口(异步:snapshot / proposals 都是 Promise) ----------
+  function scheduleRender() { render(); }
+  function render() {
+    if (!store) return;
+    if (rendering) { pendingRender = true; return; }
+    rendering = true;
+    const st = store.getState();
+    renderTop(st);
+    renderFoot(st);
+    if (!st.me) {
+      show('screen-register', true);
+      show('screen-main', false);
+      show('reg-demo', isLocal() && !!store.demo);
+      setPrivacyHook();
+      finishRender();
+      return;
+    }
+    show('screen-register', false);
+    show('screen-main', true);
+    Promise.all([store.clientSnapshot(), store.clientProposals()]).then(function (r) {
+      snap = r[0] || { now: st.now, me: { phase: 'notStarted', players: [], caddies: [] }, holes: [] };
+      if (!snap.me) snap.me = { phase: 'notStarted', players: [], caddies: [] };
+      if (!snap.holes) snap.holes = [];
+      proposals = Array.isArray(r[1]) ? r[1] : [];
+      renderMyGroup(st);
+      renderPlayThrough(st);
+      renderEvents(st);
+      renderStrip();
+      renderProposals(st);
+      renderRating(st);
+      renderDemoTools(st);
+      setPrivacyHook();
+      followMerge(st);
+    }).catch(function (e) {
+      UI.setRegion('my-group', '<div class="muted">加载失败：' + esc(errMsg(e)) + '</div>');
+    }).then(finishRender);
+  }
+  function finishRender() {
+    rendering = false;
+    if (pendingRender) { pendingRender = false; render(); }
+  }
+  // 演示模式测试钩子:其他球组(非好友)姓名列表,冒烟测试断言它们不出现在页面文字里
+  function setPrivacyHook() {
+    try {
+      if (isLocal() && store.debug && typeof store.debug.otherPlayerNames === 'function') {
+        document.body.setAttribute('data-privacy-check', JSON.stringify({ otherNames: store.debug.otherPlayerNames(me() || undefined) }));
+      } else {
+        document.body.removeAttribute('data-privacy-check');
+      }
+    } catch (e) { /* ignore */ }
+  }
+  // 我的球组被并入另一组 → 跟随到保留的那组
+  function followMerge(st) {
+    const b = myBooking(st);
+    if (!b || b.status !== 'merged' || !b.mergedInto || mergedFollowed === b.mergedInto) return;
+    mergedFollowed = b.mergedInto;
+    const m = st.me;
+    store.command('registerClient', { role: m.role, name: m.name, caddieNo: m.caddieNo, userId: m.userId, bookingId: b.mergedInto })
+      .then(function () { UI.toast('您的球组已并组，开球时间已更新'); render(); }, function () { /* ignore */ });
+  }
+
+  // ---------- 命令 ----------
+  function run(name, payload, okMsg) {
+    return store.command(name, payload).then(function (r) {
+      if (okMsg) UI.toast(okMsg);
+      render();
+      return r;
+    }, function (e) {
+      UI.toast(errMsg(e));
+      render();
+    });
+  }
+
+  // ---------- 注册 ----------
+  function setRegRole(role) {
+    ui.regRole = role === 'caddie' ? 'caddie' : 'player';
+    document.querySelectorAll('#screen-register .role').forEach(function (el) {
+      const on = el.getAttribute('data-role') === ui.regRole;
+      el.classList.toggle('on', on);
+      el.setAttribute('aria-checked', String(on));
+    });
+    show('reg-caddie-row', ui.regRole === 'caddie');
+  }
+  function submitRegister() {
+    const name = (qs('reg-name').value || '').trim();
+    const no = (qs('reg-caddie-no').value || '').trim();
+    const err = qs('reg-error');
+    err.textContent = '';
+    if (!name) { err.textContent = '请填写姓名'; return; }
+    if (ui.regRole === 'caddie' && !no) { err.textContent = '请填写球童编号'; return; }
+    const payload = { role: ui.regRole, name: name };
+    if (ui.regRole === 'caddie') payload.caddieNo = no;
+    store.command('registerClient', payload).then(function (m) {
+      if (m && m.bookingId == null) UI.toast('已登记，但今天没有找到您的球组');
+      render();
+    }, function (e) { err.textContent = errMsg(e); });
+  }
+  function registerPersona(role, group) {
+    if (!store.demo || typeof store.demo.persona !== 'function') return Promise.resolve(null);
+    if (role === 'player' && !group) group = DEMO_GROUP;                     // 未指定球组:SPEC 的演示球员 = 08:00 组第一位
+    const p = store.demo.persona(role, group);
+    if (!p) return Promise.resolve(null);
+    return store.command('registerClient', p);
+  }
+  function switchIdentity() {
+    try { localStorage.removeItem(CLIENT_KEY); } catch (e) { /* ignore */ }
+    location.href = location.pathname;
+  }
+
+  // ---------- 事件委托 ----------
+  function bind() {
+    const app = qs('app');
+    UI.delegate(app, 'click', '#screen-register .role', function (ev, el) { setRegRole(el.getAttribute('data-role')); });
+    UI.on(qs('reg-submit'), 'click', submitRegister);
+    UI.on(qs('reg-name'), 'keydown', function (ev) { if (ev.key === 'Enter') submitRegister(); });
+    UI.on(qs('reg-caddie-no'), 'keydown', function (ev) { if (ev.key === 'Enter') submitRegister(); });
+    UI.delegate(app, 'click', '[data-act="demo-persona"]', function (ev, el) {
+      const role = el.getAttribute('data-role');
+      registerPersona(role, DEMO_GROUP).then(function (m) { if (!m) UI.toast('演示身份不可用'); render(); }, function (e) { UI.toast(errMsg(e)); });
+    });
+
+    UI.delegate(app, 'click', '[data-act="evt"]', function (ev, el) {
+      blurActive();
+      const m = me(); if (!m || m.bookingId == null) return;
+      const holeNo = Number(el.getAttribute('data-hole'));
+      const type = el.getAttribute('data-type');
+      if (!holeNo || !type) return;
+      const st = store.getState();
+      if (type === 'teeOff' && snap && snap.me.phase === 'notStarted' && snap.me.teeMin != null && st.now < snap.me.teeMin - 2) {
+        if (!UI.confirm('尚未到开球时间 ' + hm(snap.me.teeMin) + '，确定已开球？')) return;
+      }
+      run('postEvent', { bookingId: m.bookingId, holeNo: holeNo, type: type, source: m.role === 'caddie' ? 'caddie' : 'player', by: m.userId },
+        type === 'teeOff' ? '已记录：第 ' + holeNo + ' 洞开球' : '已记录：离开第 ' + holeNo + ' 洞果岭');
+    });
+    UI.delegate(app, 'click', '[data-act="pt"]', function (ev, el) {
+      blurActive();
+      const m = me(); if (!m || m.bookingId == null) return;
+      const decision = el.getAttribute('data-decision');
+      run('playThrough', { bookingId: m.bookingId, decision: decision }, decision === 'accepted' ? '已记录让行，谢谢配合' : '已忽略本次建议');
+    });
+    UI.delegate(app, 'click', '[data-act="merge"]', function (ev, el) {
+      blurActive();
+      const decision = el.getAttribute('data-decision');
+      if (decision === 'decline' && !UI.confirm('拒绝并组邀请？')) return;
+      run('respondMerge', { proposalId: el.getAttribute('data-id'), side: el.getAttribute('data-side'), decision: decision }, decision === 'accept' ? '已同意并组' : '已拒绝并组');
+    });
+
+    // 评分表单
+    UI.delegate(app, 'click', '[data-act="ratee"]', function (ev, el) { blurActive(); ui.ratee = el.getAttribute('data-id'); render(); });
+    UI.delegate(app, 'click', '[data-act="star"]', function (ev, el) { blurActive(); ui.draft.stars = Number(el.getAttribute('data-n')) || 0; render(); });
+    UI.delegate(app, 'click', '[data-act="tag"]', function (ev, el) {
+      blurActive();
+      const t = el.getAttribute('data-tag');
+      const i = ui.draft.tags.indexOf(t);
+      if (i >= 0) ui.draft.tags.splice(i, 1); else ui.draft.tags.push(t);
+      render();
+    });
+    UI.delegate(app, 'input', '#rate-comment', function (ev, el) { ui.draft.comment = el.value; });
+    UI.delegate(app, 'click', '[data-act="rate-submit"]', function (ev, el) {
+      blurActive();
+      const m = me(); if (!m || m.bookingId == null) return;
+      if (!ui.draft.stars) { UI.toast('请先选择 1–5 星'); return; }
+      const ta = qs('rate-comment');
+      if (ta) ui.draft.comment = ta.value;
+      run('rate', { bookingId: m.bookingId, rateeId: el.getAttribute('data-ratee'), rateeRole: el.getAttribute('data-ratee-role'), stars: ui.draft.stars, tags: ui.draft.tags.slice(), comment: ui.draft.comment },
+        '评分已保存（仅自己可见）').then(function () { ui.draftKey = null; render(); });
+    });
+
+    // 演示控制 / 页脚
+    UI.delegate(app, 'change', '#demo-speed', function (ev, el) { if (store.demo) { store.demo.setSpeed(Number(el.value)); UI.toast('演示速度 ×' + el.value); } });
+    UI.delegate(app, 'click', '[data-act="ff"]', function (ev, el) {
+      blurActive();
+      if (!store.demo) return;
+      store.demo.jumpTo(store.demo.now() + (Number(el.getAttribute('data-min')) || 30));
+      render();
+    });
+    UI.delegate(app, 'click', '[data-act="switch"]', function () { switchIdentity(); });
+    UI.delegate(app, 'click', '[data-act="reset"]', function () {
+      if (!store.demo || !UI.confirm('重置演示数据并回到 06:20？')) return;
+      store.demo.reset();
+      mergedFollowed = null; ui.draftKey = null;
+      UI.toast('演示已重置');
+      render();
+    });
+  }
+
+  // ---------- 轮询(API 模式) ----------
+  function setupPolling() {
+    if (pollTimer != null) { clearInterval(pollTimer); pollTimer = null; }
+    if (isLocal()) return;
+    pollTimer = setInterval(function () {
+      if (document.hidden) { pollSkip = !pollSkip; if (pollSkip) return; }    // 后台页签 30 s
+      const st = store.getState();
+      store.poll(st.seq).then(render, function () { /* 失败由 Store 计数并回退 */ });
+    }, POLL_MS);
+  }
+
+  // ---------- 启动 ----------
+  function boot() {
+    const q = query();
+    const opts = { client: true, leader: false };
+    let ready;
+    if (location.protocol === 'file:' || typeof window.fetch !== 'function') {
+      // 本地文件打开:不探测后端,直接演示模式
+      const local = Store.createLocal(opts);
+      ready = local.load().then(function () { return local; });
+    } else {
+      ready = Store.auto(opts);
+    }
+    ready.then(function (s) {
+      store = s;
+      bind();
+      let pre = Promise.resolve(null);
+      const wantRole = q.role === 'player' || q.role === 'caddie' ? q.role : null;
+      if (wantRole && store.mode === 'local') {
+        const cur = store.me;
+        const sameAsStored = cur && cur.role === wantRole && (!q.group || cur.bookingId === q.group);
+        if (!sameAsStored) pre = registerPersona(wantRole, q.group || undefined).then(null, function (e) { UI.toast(errMsg(e)); return null; });
+      } else if (wantRole) {
+        setRegRole(wantRole);
+      }
+      pre.then(function () {
+        if (!store.me && wantRole) setRegRole(wantRole);
+        store.subscribe(scheduleRender);
+        store.onModeChange(function () { setupPolling(); render(); });
+        setupPolling();
+        render();
+      });
+    }, function (e) {
+      UI.setRegion('banner', '<div class="banner warn">数据加载失败：' + esc(errMsg(e)) + '</div>');
+    });
+  }
+  boot();
+  // 调试 / 冒烟脚本用:取到页面的数据源(不是正式 API)
+  window.HIOTeeLivePage = { store: function () { return store; }, render: render };
+})();
+</script>
+</body>
+</html>

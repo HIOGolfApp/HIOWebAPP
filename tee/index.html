@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>球场端 · Tee Time 管理 — 一杆高尔夫</title>
+<meta name="description" content="一杆高尔夫球场端：发球表派发、实时场况与巡查建议、旺季并组建议、球场参数与步速校准。">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff">
+<link rel="stylesheet" href="css/tee.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html" title="返回官网">
+      <svg width="15" height="26" viewBox="0 0 31.7613 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <ellipse cx="15.8806" cy="51.8209" rx="15.8806" ry="4.1791" fill="#111"/>
+        <path d="M11.7 4.83433C11.7 4.64968 11.8497 4.5 12.0343 4.5H19.7657C19.9503 4.5 20.1 4.64968 20.1 4.83433V49H11.7V4.83433Z" fill="#111"/>
+        <path d="M16.3758 7.79297C16.207 8.44227 15.9892 9.07951 15.7215 9.69824C15.0113 11.3393 13.9722 12.8179 12.6687 14.042C11.3653 15.266 9.82471 16.2098 8.14238 16.8154C7.50783 17.0439 6.85788 17.2209 6.19902 17.3486L6.31523 15.5127C6.72993 15.4145 7.14013 15.2953 7.54277 15.1504C8.9978 14.6265 10.3305 13.8106 11.4578 12.752C12.585 11.6934 13.4833 10.4152 14.0975 8.99609C14.2674 8.60329 14.4119 8.20075 14.5359 7.79297H16.3758Z" stroke="#CB0018" stroke-width="6.58576"/>
+        <circle cx="9.44478" cy="48.4776" r="4.1791" fill="#EAEAEA"/>
+      </svg>
+      一杆高尔夫 <span class="sep">·</span> 球场端
+    </a>
+    <span class="muted" id="course-name">—</span>
+    <span class="muted num" id="sheet-date">—</span>
+    <span class="spacer"></span>
+    <div class="clock num" id="clock" aria-live="off">--:--</div>
+    <div class="demo-ctl demo-only demo-speed-wrap">
+      <label>速度
+        <select id="demo-speed" data-testid="demo-speed" aria-label="演示速度">
+          <option value="1">×1</option>
+          <option value="10">×10</option>
+          <option value="60">×60</option>
+        </select>
+      </label>
+    </div>
+    <button class="btn btn-sm demo-toggle demo-only" id="demo-toggle" type="button" aria-expanded="false" aria-controls="demo-ctl">更多</button>
+    <div class="demo-ctl demo-only" id="demo-ctl">
+      <label>跳到 <input type="time" id="jump-time" step="60" aria-label="跳到时间"></label>
+      <button class="btn btn-sm" id="jump-btn" type="button">跳到</button>
+      <label class="switch"><input type="checkbox" id="auto-send" checked> 自动开球</label>
+      <button class="btn btn-sm btn-secondary" id="reset-btn" type="button">重置演示</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner" data-testid="mode-banner" id="mode-banner" role="status"><b>正在连接…</b></div>
+  <div id="field-banner"></div>
+  <div class="stats-row" id="stats"></div>
+
+  <nav class="tabs" id="tabs" aria-label="功能页签">
+    <button class="tab on" data-tab="sheet" data-testid="tab-sheet" type="button">发球表</button>
+    <button class="tab" data-tab="live" data-testid="tab-live" type="button">实时场况</button>
+    <button class="tab" data-tab="merge" data-testid="tab-merge" type="button">并组建议</button>
+    <button class="tab" data-tab="params" data-testid="tab-params" type="button">球场参数</button>
+  </nav>
+
+  <!-- 1. 发球表 -->
+  <section id="panel-sheet" class="panel" aria-label="发球表">
+    <div id="sheet-toolbar" class="toolbar"></div>
+    <div id="sheet-form" class="card hidden" role="region" aria-label="预订表单">
+      <h3 id="f-title">新增预订</h3>
+      <div class="form-row">
+        <label for="f-time">开球时间</label><input type="time" id="f-time" step="60">
+        <label for="f-size">人数</label>
+        <select id="f-size"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option></select>
+      </div>
+      <div id="f-players" class="player-rows">
+        <div class="form-row" data-row="0"><label>球员 1</label><input type="text" class="f-name" maxlength="20" placeholder="姓名（可选，与老客户同名则沿用其步速数据）"><label class="switch"><input type="checkbox" class="f-member"> 会员</label></div>
+        <div class="form-row" data-row="1"><label>球员 2</label><input type="text" class="f-name" maxlength="20" placeholder="姓名（可选）"><label class="switch"><input type="checkbox" class="f-member"> 会员</label></div>
+        <div class="form-row" data-row="2"><label>球员 3</label><input type="text" class="f-name" maxlength="20" placeholder="姓名（可选）"><label class="switch"><input type="checkbox" class="f-member"> 会员</label></div>
+        <div class="form-row" data-row="3"><label>球员 4</label><input type="text" class="f-name" maxlength="20" placeholder="姓名（可选）"><label class="switch"><input type="checkbox" class="f-member"> 会员</label></div>
+      </div>
+      <div class="form-row" id="f-extra">
+        <label class="switch"><input type="checkbox" id="f-merge" checked> 允许并组</label>
+        <input type="text" id="f-notes" maxlength="60" placeholder="备注" style="flex:1; min-width:160px">
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-primary" data-act="find" type="button">查找可行时段</button>
+        <button class="btn" data-act="book" type="button">按此时间预订</button>
+        <button class="btn btn-secondary" data-act="closeForm" type="button">关闭</button>
+        <span class="hint">「不影响后组」：插入后任何后组的任一洞开始 / 结束时间都不得推迟；无步速数据的球组按 8 分钟间隔。</span>
+      </div>
+      <div id="slot-finder" data-testid="slot-finder" class="slot-finder" aria-live="polite"></div>
+    </div>
+    <div class="table-wrap sheet-wrap" id="sheet-table"></div>
+  </section>
+
+  <!-- 2. 实时场况 -->
+  <section id="panel-live" class="panel hidden" aria-label="实时场况">
+    <div id="live-strip"></div>
+    <div class="grid two" style="margin-top:12px; align-items:start">
+      <div class="card">
+        <h3>巡查建议 <span class="hint">按优先级排序：红 &gt; 黄，自身慢 &gt; 被阻；已催促的排在最后 · 成员 ● 会员 ○ 普通</span></h3>
+        <div id="marshal-list" data-testid="marshal-list"></div>
+      </div>
+      <div class="drawer" id="live-drawer"></div>
+    </div>
+  </section>
+
+  <!-- 3. 并组建议 -->
+  <section id="panel-merge" class="panel hidden" aria-label="并组建议">
+    <div id="merge-head"></div>
+    <div id="merge-list" style="margin-top:12px"></div>
+  </section>
+
+  <!-- 4. 球场参数 -->
+  <section id="panel-params" class="panel hidden" aria-label="球场参数">
+    <div id="params-holes"></div>
+    <div id="params-config" style="margin-top:12px"></div>
+    <div id="params-cal" style="margin-top:12px"></div>
+    <div id="params-caddies" style="margin-top:12px"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  一杆高尔夫 · 球场端 Tee Time 管理 · <a href="live.html">客户端（球员 / 球童）</a> · <a href="../index.html">返回官网</a>
+</footer>
+
+<script src="js/course.js"></script>
+<script src="js/pace.js"></script>
+<script src="js/learn.js"></script>
+<script src="js/live.js"></script>
+<script src="js/merge.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script>
+(function () {
+  'use strict';
+  var T = window.HIOTee;
+  var Course = T.Course, Pace = T.Pace, Learn = T.Learn, Live = T.Live, Merge = T.Merge, Store = T.Store, UI = T.UI;
+  var esc = UI.esc, hm = UI.hm;
+  var EPS = Course.EPS;
+  var ACTIVE = { booked: true, checkedIn: true, onCourse: true };
+  var UI_KEY = 'hio.tee.v1.ui';
+  var TABS = ['sheet', 'live', 'merge', 'params'];
+
+  var PHASE_TEXT = { notStarted: '未开球', playing: '正在打', between: '转场中', done: '已完成' };
+  var CAUSE_TEXT = { OWN: '自身慢', AHEAD: '被前组阻挡', NONE: '正常' };
+  var LEVEL_TEXT = { green: '正常', yellow: '黄：已超时', red: '红：严重超时' };   // 红有滞回(≥ redOn 触发、≤ redOff 解除),不写死分钟数
+  var DAY_END = 1440;
+  var EV_TEXT = { arriveTee: '到达发球台', teeOff: '开球', leaveGreen: '离开果岭' };
+  var SRC_TEXT = { caddie: '球童', player: '球员', marshal: '巡查', scorecard: '记分卡', gps: 'GPS', sim: '模拟' };
+  var PSTATUS = { suggested: '系统建议', proposed: '已发送，待双方确认', accepted_a: 'A 方已接受', accepted_b: 'B 方已接受', confirmed: '双方已确认',
+    applied: '已应用', declined: '已拒绝', expired: '已过期', withdrawn: '已撤回' };
+  var POPEN = { suggested: true, proposed: true, accepted_a: true, accepted_b: true, confirmed: true };
+
+  var store = null;
+  var tab = 'sheet';
+  var selectedId = null;          // 实时场况抽屉中选中的球组
+  var form = null;                // null | { type: 'new' } | { type: 'move', id }
+  var finderHtml = '';            // 时段查找结果(表单内区域)
+  var evHole = null;              // 抽屉「巡查记录事件」里选中的洞(跨重绘保留;切换球组时清空)
+  var affectedOpen = null;        // 巡查建议「受影响但正常」折叠区:null = 自动(没有需催促的组时展开)
+  var pollTimer = null;           // API 模式轮询
+  var POLL_MS = 12000;
+
+  function $(id) { return document.getElementById(id); }
+  function isNum(x) { return typeof x === 'number' && isFinite(x); }
+  function prime(n) { return Math.round(n) + '′'; }
+  // 预警旁的分钟数:级别由 effLag(有效滞后)决定,显示也用它;向下取整,避免「黄 超时 10′」压在「红 ≥ 10」的图例下
+  function lagLabel(g) {
+    if (!g) return '';
+    if (g.level === 'red' || g.level === 'yellow') {
+      var n = Math.floor((isNum(g.effLag) ? g.effLag : g.lag) + EPS);
+      return n >= 1 ? '超时 ' + n + '′' : '';
+    }
+    if (g.cause === 'AHEAD' && isNum(g.lag) && g.lag >= 1) return '落后 ' + Math.floor(g.lag + EPS) + '′（前组造成）';
+    return '';
+  }
+  function ageLabel(age) {
+    if (!isNum(age)) return '';
+    return '最近事件 ' + (age < 1 ? '刚刚' : Math.floor(age) + '′前');
+  }
+  function noShowLabel(over) {
+    if (over >= 60) return '未到 · 已超过 1 小时以上';
+    return '未到 · 超过 ' + Math.floor(over) + ' 分';
+  }
+  function fix(x, d) { return isNum(x) ? x.toFixed(d == null ? 1 : d) : '—'; }
+  function names(b) { return (b.players || []).map(function (p) { return p.name; }).join('、'); }
+  function groupLabel(b) { return hm(b.teeMin) + ' 组'; }
+  function noop() {}
+
+  function loadPrefs() { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch (e) { return {}; } }
+  function savePrefs(p) { try { localStorage.setItem(UI_KEY, JSON.stringify(p)); } catch (e) { /* 隐身模式等 */ } }
+
+  // ---------- 派生数据(每次渲染计算一次) ----------
+  function derive(s) {
+    var course = s.course, sheet = s.sheet, cfg = course.config;
+    var holes = Course.holesForRouting(course, sheet.routingId);
+    var plans = {}, byId = {};
+    s.bookings.forEach(function (b) {
+      byId[b.id] = b;
+      plans[b.id] = Pace.groupPlan(b.players || [], s.paceStats, cfg, s.date, b.size);
+    });
+    var sorted = s.bookings.slice().sort(function (a, b) {
+      if (a.teeMin !== b.teeMin) return a.teeMin - b.teeMin;
+      return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+    });
+    var live = s.live || { groups: [], byId: {}, order: [], projections: { byId: {}, list: [] }, fieldDelayMin: 0, alerts: {} };
+    var hold = sheet.fieldHoldMin || 0;
+    var lastOff = null;
+    s.bookings.forEach(function (b) {
+      if (isNum(b.teeOffActual) && (b.status === 'onCourse' || b.status === 'finished') && (!lastOff || b.teeOffActual > lastOff.teeOffActual)) lastOff = b;
+    });
+    // 下一组 = 第一条已签到的,或仍在宽限期内的已预订(超过宽限仍未签到的视为未到,不再占用「建议开球」提示)
+    var grace = cfg.starter.noShowGraceMin;
+    var next = null;
+    for (var i = 0; i < sorted.length; i++) {
+      var sb = sorted[i];
+      if (sb.status === 'checkedIn' || (sb.status === 'booked' && s.now < sb.teeMin + grace)) { next = sb; break; }
+    }
+    function rec(b) { return Pace.iRec({ plan: plans[b.id], intervalOverride: b.intervalOverride }, cfg); }
+    // 建议开球时间 sendAt(g) = max(teeMin + fieldHold, p.teeOffActual + iRec(p)),p = 最后一个实际开球的球组
+    function sendAt(b) {
+      var t = b.teeMin + hold;
+      if (lastOff) t = Math.max(t, lastOff.teeOffActual + rec(lastOff).interval);
+      return t;
+    }
+    return { s: s, cfg: cfg, holes: holes, plans: plans, byId: byId, sorted: sorted, live: live, hold: hold, lastOff: lastOff, next: next, rec: rec, sendAt: sendAt, now: s.now };
+  }
+  function eventsOf(s, id) {
+    return s.events.filter(function (e) { return e.bookingId === id; }).sort(function (a, b) { return a.t - b.t; });
+  }
+  function caddieHtml(s, b) {
+    var ids = b.caddieIds || [];
+    if (!ids.length) return '';
+    var out = ids.map(function (id) {
+      var c = null;
+      s.caddies.forEach(function (x) { if (x.id === id) c = x; });
+      return c ? '球童 ' + c.no : '球童';
+    });
+    return '<span class="tiny">' + esc(out.join(' · ')) + '</span>';
+  }
+  // 会员 ● / 普通 ○(巡查行里的紧凑表示)
+  function memberDots(b) {
+    var m = 0, r = 0;
+    (b.players || []).forEach(function (p) { if (p.isMember) m++; else r++; });
+    var label = '会员 ' + m + ' 人，普通 ' + r + ' 人';
+    var dots = '';
+    for (var i = 0; i < m; i++) dots += '●';
+    for (var j = 0; j < r; j++) dots += '○';
+    return '<span class="mchips" role="img" aria-label="' + label + '" title="' + label + '">' + dots + '</span>';
+  }
+  function planTag(plan, r) {
+    if (r.override) return ' 指定';
+    if (plan.fPlan < 1 - EPS) return ' 快组';
+    if (r.slow) return ' 慢组';
+    return '';
+  }
+
+  // ---------- 顶栏 / 横幅 / 统计 ----------
+  function renderHeader(d) {
+    var s = d.s, cfg = d.cfg;
+    UI.setRegion('course-name', esc(s.course.name));
+    UI.setRegion('sheet-date', esc(s.date));
+    var small = store.demo ? '演示时钟 ×' + store.demo.speed : (s.mode === 'api' ? '服务器时间' : '');
+    UI.setRegion('clock', (s.dayEnded ? '24:00' : hm(s.now)) + (small ? '<small>' + esc(small) + '</small>' : ''));
+
+    var banner = '<b>' + esc(s.banner || (s.mode === 'api' ? '已连接后端' : '演示模式')) + '</b>';
+    if (s.storageError) banner += '<span class="warn-text">本机存储已满，演示数据不再保存（刷新后从上次保存处继续）</span>';
+    else if (store.demo) {
+      banner += '<span>' + (store.demo.isLeader() ? '本页为演示主控，数据仅保存在本机浏览器' : '另一标签页正在驱动演示，本页同步只读') + '</span>';
+      banner += '<span class="tiny">球员 / 球童端：<a href="live.html?role=player&amp;group=b0800" style="text-decoration:underline">live.html</a></span>';
+    }
+    if (s.dayEnded) banner += '<span>今日演示已到 24:00 结束，点「重置演示」重新开始</span>';
+    UI.setRegion('mode-banner', banner);
+
+    var parts = [];
+    if (d.hold > 0) parts.push('全场暂停 ' + Math.round(d.hold) + ' 分（已计入所有球组的参考时间，不计为滞后）');
+    if (d.live.fieldDelayMin >= cfg.fieldDelayBannerMin) parts.push('全场延误 ' + Math.round(d.live.fieldDelayMin) + ' 分（场上球组滞后中位数）');
+    UI.setRegion('field-banner', parts.length ? '<div class="banner alert" role="alert"><b>' + esc(parts.join(' · ')) + '</b></div>' : '');
+
+    var on = 0, wait = 0, done = 0, yellow = 0, red = 0, blocked = 0;
+    s.bookings.forEach(function (b) {
+      if (b.status === 'onCourse') on++;
+      else if (b.status === 'booked' || b.status === 'checkedIn') wait++;
+      else if (b.status === 'finished') done++;
+    });
+    d.live.groups.forEach(function (g) {
+      if (g.phase !== 'playing' && g.phase !== 'between') return;
+      if (g.level === 'red') red++; else if (g.level === 'yellow') yellow++; else if (g.cause === 'AHEAD') blocked++;
+    });
+    UI.setRegion('stats',
+      '<span class="stat">场上 <b>' + on + '</b> 组</span>' +
+      '<span class="stat">待开球 <b>' + wait + '</b> 组</span>' +
+      '<span class="stat">已完成 <b>' + done + '</b> 组</span>' +
+      '<span class="stat">预警 黄 <b>' + yellow + '</b> · 红 <b>' + red + '</b> · 被阻 <b>' + blocked + '</b></span>');
+  }
+
+  // ---------- 1. 发球表 ----------
+  function renderSheet(d) {
+    var s = d.s, cfg = d.cfg, peak = !!s.sheet.peakMode;
+    UI.setRegion('sheet-toolbar',
+      '<button class="btn btn-primary" data-act="newBooking" data-testid="btn-new-booking" type="button">新增预订</button>' +
+      '<button class="chip toggle' + (peak ? ' on' : '') + '" data-act="togglePeak" type="button" aria-pressed="' + peak + '">旺季模式：' + (peak ? '开' : '关') + '</button>' +
+      '<span class="demo-ctl"><label>全场暂停 <input type="number" id="hold-min" min="0" max="180" step="5" value="' + Math.round(d.hold) + '" style="width:64px"> 分</label>' +
+      '<button class="btn btn-sm" data-act="setHold" type="button">设置</button>' +
+      (d.hold > 0 ? '<button class="btn btn-sm btn-secondary" data-act="clearHold" type="button">解除</button>' : '') + '</span>' +
+      '<span class="hint">营业 ' + hm(s.sheet.openMin) + '–' + hm(s.sheet.closeMin) + ' · 基础间隔 ' + cfg.iBase + '′（无步速数据按 8 分钟；快组 6–7′）</span>');
+
+    var rows = ['<table class="table sheet"><thead><tr><th>时间</th><th>球组 / 人数</th><th class="players">球员</th><th>状态</th><th>预警</th><th>场上 / 提示</th><th>操作</th></tr></thead><tbody>'];
+    d.sorted.forEach(function (b, i) {
+      rows.push(rowHtml(d, b));
+      if (ACTIVE[b.status]) {
+        var nb = null;
+        for (var j = i + 1; j < d.sorted.length; j++) if (ACTIVE[d.sorted[j].status]) { nb = d.sorted[j]; break; }
+        if (nb) rows.push(intervalRow(d, b, nb));
+      }
+    });
+    rows.push('</tbody></table>');
+    UI.setRegion('sheet-table', rows.join(''));
+    UI.setRegion('slot-finder', finderHtml);
+  }
+
+  function rowHtml(d, b) {
+    var s = d.s, cfg = d.cfg, now = d.now, st = b.status;
+    var g = d.live.byId[b.id] || null;
+    var onCourse = !!(g && (g.phase === 'playing' || g.phase === 'between'));
+    var isNext = !!(d.next && d.next.id === b.id);
+    var grace = cfg.starter.noShowGraceMin, warn = cfg.starter.checkInWarnMin;
+    var overdue = st === 'booked' && now >= b.teeMin + grace;        // 超过宽限仍未签到:按「未到」处理,标记未到为主操作
+    var plan = d.plans[b.id];
+
+    var time = '<div class="cell-stack"><b class="num">' + hm(b.teeMin) + '</b>' +
+      (isNum(b.teeOffActual) ? '<span class="tiny num">实际 ' + hm(b.teeOffActual) + '</span>' : '') + '</div>';
+
+    var players = (b.players || []).map(UI.chipPlayer).join('') + ' ' + caddieHtml(s, b) +
+      (b.notes ? '<div class="tiny">' + esc(b.notes) + '</div>' : '');
+
+    var chips = [UI.statusChip(st)];
+    if (st === 'booked' && now >= b.teeMin - warn && now < b.teeMin + grace) chips.push('<span class="chip status">未签到</span>');
+    if (overdue) chips.push('<span class="chip status bad">' + noShowLabel(now - b.teeMin) + '</span>');
+    else if (st === 'checkedIn' && now >= b.teeMin + grace) chips.push('<span class="chip status bad">迟到 ' + prime(now - b.teeMin) + '</span>');
+    var early = st === 'checkedIn' && now < b.teeMin && d.sendAt(b) <= now - 1;
+    if (early) chips.push('<span class="chip status">可提前 ' + prime(b.teeMin - now) + ' 开球</span>');
+    if (b.forced) chips.push('<span class="chip status bad" title="强制预订：当时判定会影响后组">强制插入</span>');
+    if (st === 'merged' && b.mergedInto && d.byId[b.mergedInto]) chips.push('<span class="tiny">并入 ' + groupLabel(d.byId[b.mergedInto]) + '</span>');
+    if (!b.allowMerge && (st === 'booked' || st === 'checkedIn')) chips.push('<span class="tiny">不接受并组</span>');
+
+    var alert = '';
+    if (onCourse) {
+      // 先写级别(正常 / ● 黄 / ● 红 / ○ 被阻),分钟数用决定级别的有效滞后;延迟开球另起一行
+      var dot = UI.dot(g.level, g.cause, g.effLag);
+      var lagT = lagLabel(g);
+      alert = (dot || '<span class="tiny">正常</span>') + (lagT ? ' <span class="num">' + lagT + '</span>' : '');
+      if (g.snoozed) alert += ' <span class="tiny">已催促</span>';
+      if (isNum(g.teeDelay) && g.teeDelay >= 1) alert += '<div class="tiny">延迟开球 ' + prime(g.teeDelay) + '</div>';
+    } else if (st === 'finished' && isNum(b.teeOffActual) && b.teeOffActual - b.teeMin >= 1) {
+      alert = '<span class="tiny">延迟开球 ' + prime(b.teeOffActual - b.teeMin) + '</span>';
+    }
+
+    var pos = '';
+    if (g && g.phase === 'playing') {
+      pos = '<div class="cell-stack"><b>第 ' + g.holeNo + ' 洞</b><span class="tiny">本洞 ' + UI.fmtRemaining(g.remainingMin, g.overMin) +
+        (isNum(g.etaRoundMin) ? ' · 预计 ' + hm(now + g.etaRoundMin) + ' 完成' : '') + '</span></div>';
+    } else if (g && g.phase === 'between') {
+      pos = '<div class="cell-stack"><b>前往第 ' + g.holeNo + ' 洞</b><span class="tiny">预计 ' + hm(now + (g.remainingMin || 0)) + ' 开球</span></div>';
+    } else if (isNext) {
+      var sa = d.sendAt(b);
+      pos = '<div class="cell-stack"><b>建议开球 ' + hm(sa) + '</b>' +
+        (now < sa - EPS ? '<span class="pos-line">还需等 ' + prime(Math.ceil(sa - now - EPS)) + '</span>' : '<span class="pos-line">可以开球</span>') + '</div>';
+    } else if (overdue) {
+      pos = '<span class="tiny">超过宽限 ' + grace + '′ 仍未签到；到达后可签到开球，否则请标记未到</span>';
+    } else if (st === 'booked' || st === 'checkedIn') {
+      var r = d.rec(b);
+      var eta = g && isNum(g.nextTeeEta) ? g.nextTeeEta : b.teeMin + d.hold;
+      pos = '<span class="tiny">预计 ' + hm(eta) + ' 开球 · 后组间隔 ' + r.interval + '′' + esc(planTag(plan, r)) + '</span>';
+    } else if (st === 'finished') {
+      pos = '<span class="tiny">完成 ' + hm(b.finishedAt) + (isNum(b.fRound) ? ' · 实测步速 ' + b.fRound.toFixed(2) : '') + (b.finishedManually ? ' · 手动标记' : '') + '</span>';
+    }
+
+    var acts = [];
+    function act(name, label, cls) {
+      acts.push('<button class="btn btn-sm' + (cls ? ' ' + cls : '') + '" data-act="' + name + '" data-id="' + esc(b.id) + '" type="button">' + label + '</button>');
+    }
+    if (st === 'booked') act('checkIn', '签到');
+    if (st === 'booked' || st === 'checkedIn') act('teeOff', early ? '提前开球' : '开球', overdue ? '' : 'btn-primary');
+    if (overdue) act('noShow', '标记未到', 'btn-primary');
+    if (st === 'booked' || st === 'checkedIn') { act('move', '改时'); act('cancel', '取消'); }
+    if (st === 'onCourse') { act('view', '查看'); act('finish', '标记完成'); }
+    if (st === 'finished') act('view', '详情');
+
+    var cls = (selectedId === b.id ? 'sel ' : '') + (isNext ? 'row-next' : '');
+    return '<tr data-testid="sheet-row" data-id="' + esc(b.id) + '" class="' + cls.trim() + '">' +
+      '<td class="c-time">' + time + '</td><td class="c-group">' + UI.chipGroup(b) + '</td><td class="players c-players">' + players + '</td>' +
+      '<td class="c-status"><div class="cell-stack">' + chips.join('') + '</div></td><td class="c-alert">' + alert + '</td><td class="pos c-pos">' + pos + '</td>' +
+      '<td class="actions c-actions">' + acts.join(' ') + '</td></tr>';
+  }
+
+  // 两行之间的间隔标签:"8′" / "8′ 推荐 7′ 快组" / 间隔不足警告
+  function intervalRow(d, a, b) {
+    var gap = b.teeMin - a.teeMin;
+    var r = d.rec(a), plan = d.plans[a.id];
+    var txt = prime(gap);
+    if (r.override) txt += ' 指定 ' + r.interval + '′';
+    else if (Math.abs(plan.fPlan - 1) > EPS) txt += ' 推荐 ' + r.interval + '′' + planTag(plan, r);
+    if (gap < r.interval - EPS) txt += ' <span class="warn">间隔不足（建议 ≥ ' + r.interval + '′）</span>';
+    return '<tr class="interval-row"><td colspan="7"><span class="num">' + txt + '</span></td></tr>';
+  }
+
+  // ---------- 预订表单 / 时段查找 ----------
+  function syncPlayerRows() {
+    var size = Number($('f-size').value) || 1;
+    var rows = $('f-players').querySelectorAll('[data-row]');
+    for (var i = 0; i < rows.length; i++) rows[i].classList.toggle('hidden', i >= size);
+  }
+  function readTime() {
+    var v = Course.parseHM($('f-time').value);
+    return isNum(v) ? v : NaN;
+  }
+  function readPlayers(s) {
+    var size = Number($('f-size').value) || 1;
+    var rows = $('f-players').querySelectorAll('[data-row]');
+    var out = [];
+    for (var i = 0; i < size && i < rows.length; i++) {
+      var name = rows[i].querySelector('.f-name').value.trim() || ('球员 ' + (i + 1));
+      var member = rows[i].querySelector('.f-member').checked;
+      var p = { name: name, isMember: member };
+      for (var pid in s.players) if (Object.prototype.hasOwnProperty.call(s.players, pid) && s.players[pid].name === name) { p.id = pid; break; }
+      out.push(p);
+    }
+    return out;
+  }
+  function openForm(mode) {
+    form = mode;
+    finderHtml = '';
+    var s = store.getState(), d = derive(s);
+    var f = $('sheet-form');
+    f.classList.remove('hidden');
+    if (mode.type === 'move') {
+      var b = d.byId[mode.id];
+      if (!b) { closeForm(); return; }
+      $('f-title').textContent = '改时：' + groupLabel(b) + '（' + names(b) + '）';
+      $('f-time').value = hm(Math.max(b.teeMin, Math.ceil(s.now)));
+      $('f-size').value = String(b.size);
+      $('f-size').disabled = true;
+      $('f-players').classList.add('hidden');
+      $('f-extra').classList.add('hidden');
+      runFinder(readTime());
+    } else {
+      $('f-title').textContent = '新增预订';
+      var t = Math.ceil((s.now + 60) / 8) * 8;
+      t = Math.min(Math.max(t, s.sheet.openMin), s.sheet.closeMin);
+      $('f-time').value = hm(t);
+      $('f-size').value = '4';
+      $('f-size').disabled = false;
+      $('f-players').classList.remove('hidden');
+      $('f-extra').classList.remove('hidden');
+      var rows = $('f-players').querySelectorAll('[data-row]');
+      for (var i = 0; i < rows.length; i++) { rows[i].querySelector('.f-name').value = ''; rows[i].querySelector('.f-member').checked = false; }
+      $('f-merge').checked = true;
+      $('f-notes').value = '';
+      syncPlayerRows();
+      UI.setRegion('slot-finder', finderHtml);
+    }
+    try { f.scrollIntoView({ block: 'nearest' }); } catch (e) { /* 旧浏览器 */ }
+  }
+  function closeForm() {
+    form = null;
+    finderHtml = '';
+    $('sheet-form').classList.add('hidden');
+    UI.setRegion('slot-finder', '');
+  }
+  // Pace.suggestSlots:排名前 5 的可行时段 + 被拒原因汇总
+  function runFinder(tReq) {
+    if (!form) return;
+    var s = store.getState(), d = derive(s), cfg = d.cfg;
+    if (!isNum(tReq)) { finderHtml = '<div class="banner warn"><b>请填写开球时间</b></div>'; UI.setRegion('slot-finder', finderHtml); return; }
+    var exclude = form.type === 'move' ? form.id : null;
+    var size, plan;
+    if (form.type === 'move') {
+      var mb = d.byId[form.id];
+      size = mb.size; plan = d.plans[mb.id];
+    } else {
+      var ps = readPlayers(s);
+      size = ps.length;
+      plan = Pace.groupPlan(ps, s.paceStats, cfg, s.date, size);
+    }
+    var others = s.bookings.filter(function (b) { return b.id !== exclude; });
+    var progress = {};
+    others.forEach(function (b) { if (ACTIVE[b.status]) progress[b.id] = Live.deriveProgress(b, eventsOf(s, b.id), d.holes); });
+    var groups = Pace.sheetGroups(others, d.plans, { fieldHoldMin: d.hold, progressById: progress, order: d.live.order });
+    var res = Pace.suggestSlots(d.holes, cfg, groups, { tReq: tReq, windowMin: 60, plan: plan, size: size, openMin: s.sheet.openMin, closeMin: s.sheet.closeMin, now: s.now });
+
+    var html = '<h4 style="font-size:13.5px;margin:4px 0 8px">可行时段（' + hm(tReq) + ' 前后 1 小时，' + size + ' 人，计划步速 ' + plan.fPlan.toFixed(2) + '）</h4>';
+    if (!res.slots.length) html += '<p class="hint">附近 1 小时内没有不影响后组的时段，请换一个时间再找。</p>';
+    res.slots.forEach(function (sl) {
+      var wait = sl.candWait < 0.5 ? '无等待' : '预计等待 ' + Math.round(sl.candWait) + ' 分';
+      var extra = sl.warnings && sl.warnings.indexOf('CAND_WAITS') >= 0 ? ' · 等待较长' : '';
+      html += '<button class="slot" type="button" data-act="pick" data-tee="' + sl.tee + '"><span class="t">' + hm(sl.tee) + '</span><span>' + wait + extra + '</span>' +
+        '<span class="grow"></span><span class="tiny">全程约 ' + Course.fmtDur(sl.candRound) + (sl.tee === tReq ? ' · 原请求时间' : ' · 偏差 ' + prime(Math.abs(sl.tee - tReq))) + '</span></button>';
+    });
+    var rj = res.rejected, total = 0;
+    for (var k in rj) if (Object.prototype.hasOwnProperty.call(rj, k)) total += rj[k];
+    if (total > 0) {
+      var parts = [];
+      if (rj.IMPACTS_BEHIND) parts.push('影响后组 ' + rj.IMPACTS_BEHIND);
+      if (rj.GAP_AHEAD + rj.GAP_BEHIND) parts.push('间隔不足 ' + (rj.GAP_AHEAD + rj.GAP_BEHIND));
+      if (rj.OUTSIDE_HOURS) parts.push('不在营业时间 ' + rj.OUTSIDE_HOURS);
+      html += '<p class="hint">其余 ' + total + ' 个时间不可行：' + parts.join(' · ') + '</p>';
+    }
+    finderHtml = html;
+    UI.setRegion('slot-finder', finderHtml);
+  }
+  function book(teeMin, force) {
+    if (!form) return;
+    if (!isNum(teeMin)) { UI.toast('请填写开球时间'); return; }
+    var s = store.getState();
+    var p, name, okMsg;
+    if (form.type === 'move') {
+      name = 'moveBooking';
+      p = { id: form.id, teeMin: teeMin, force: !!force };
+      okMsg = '已改时到 ' + hm(teeMin);
+    } else {
+      var players = readPlayers(s);
+      name = 'createBooking';
+      p = { teeMin: teeMin, size: players.length, players: players, allowMerge: $('f-merge').checked, notes: $('f-notes').value.trim(), force: !!force };
+      okMsg = '已预订 ' + hm(teeMin) + '（' + players.length + ' 人）';
+    }
+    store.command(name, p).then(function () {
+      UI.toast(okMsg);
+      closeForm();
+    }, function (e) {
+      if (e && e.code === 42201) {
+        var data = e.data || {};
+        var victim = data.victimId ? derive(store.getState()).byId[data.victimId] : null;
+        finderHtml = '<div class="banner warn"><b>' + hm(teeMin) + ' 不可行：' + esc(e.message) + '</b>' +
+          (victim ? '<span>受影响：' + groupLabel(victim) + '</span>' : '') +
+          '<button class="btn btn-sm btn-danger" type="button" data-act="force" data-tee="' + teeMin + '">仍然' + (form.type === 'move' ? '改时' : '预订') + '（强制）</button></div>';
+        UI.setRegion('slot-finder', finderHtml);
+        var keep = finderHtml;
+        runFinder(teeMin);
+        finderHtml = keep + finderHtml;
+        UI.setRegion('slot-finder', finderHtml);
+      } else UI.toast(e && e.message ? e.message : '操作失败');
+    });
+  }
+
+  // 开球:早于 sendAt − earlySendMaxMin 时确认
+  function teeOff(d, b) {
+    var sa = d.sendAt(b);
+    if (d.lastOff && d.now < sa - d.cfg.starter.earlySendMaxMin - EPS) {
+      var gap = d.now - d.lastOff.teeOffActual, need = d.rec(d.lastOff).interval;
+      if (!UI.confirm('距前组仅 ' + Math.max(0, Math.round(gap)) + '′（建议 ≥ ' + need + '′），确定开球？')) return;
+    }
+    run('teeOff', { id: b.id }, groupLabel(b) + '已开球');
+  }
+
+  // ---------- 2. 实时场况 ----------
+  function renderLive(d) {
+    UI.setRegion('live-strip', stripHtml(d));
+    UI.setRegion('marshal-list', marshalHtml(d));
+    UI.setRegion('live-drawer', drawerHtml(d));
+  }
+  function stripHtml(d) {
+    var H = d.holes.length, buckets = [], i;
+    for (i = 0; i < H; i++) buckets.push([]);
+    d.live.order.forEach(function (id) {
+      var g = d.live.byId[id];
+      if (g && g.holeIdx >= 0 && g.holeIdx < H) buckets[g.holeIdx].push(g);
+    });
+    var cols = d.holes.map(function (h, idx) {
+      var sel = false;
+      var pins = buckets[idx].map(function (g) {
+        var b = d.byId[g.bookingId];
+        var isSel = selectedId === g.bookingId;
+        if (isSel) sel = true;
+        var title = groupLabel(b) + ' · ' + (g.phase === 'between' ? '前往' : '正在') + '第 ' + h.no + ' 洞 · ' + LEVEL_TEXT[g.level] + (g.cause === 'AHEAD' ? '（被前组阻挡）' : '');
+        return '<button class="pinbtn' + (isSel ? ' sel' : '') + '" type="button" data-act="select" data-id="' + esc(b.id) + '" title="' + esc(title) + '" aria-label="' + esc(title) + '">' +
+          UI.pin(g.level, g.cause, Merge.isMemberGroup(b), false) + '</button>';
+      }).join('');
+      return '<div class="col' + (sel ? ' selected' : '') + '"><div class="hole-no">' + h.no + '</div><div class="par"><span class="par-full">Par ' + h.par + ' · ' + h.std + '′</span><span class="par-short">P' + h.par + '</span></div>' +
+        '<div class="dots">' + pins + '</div><div class="count">' + (buckets[idx].length ? buckets[idx].length + ' 组' : '') + '</div></div>';
+    });
+    return '<div class="card"><h3>场上位置 <span class="hint">实心 = 会员球组 · 空心 = 普通球组 · 黄 / 红光环 = 预警 · 虚线 = 被前组阻挡 · 转场中的球组显示在下一洞 · 点击查看详情</span></h3>' +
+      '<div class="strip">' + cols.join('') + '</div></div>';
+  }
+  function marshalHtml(d) {
+    var s = d.s, cfg = d.cfg;
+    var rows = Live.marshalList(d.live);
+    var legend = '黄 = 自身超时 ≥ ' + cfg.yellowOn + ' 分钟，红 = 自身超时 ≥ ' + cfg.redOn + ' 分钟（回落到 ≤ ' + cfg.redOff + ' 分钟后解除）；被前组阻挡的部分不算自身滞后。';
+    if (!rows.length) return '<p class="hint">暂无需要催促的球组。' + legend + '</p>';
+    // 需要催促的(黄 / 红)在前;被阻 / 正常但影响后组的放在折叠区,只给「详情」
+    var urgent = [], affected = [];
+    rows.forEach(function (g) { if (g.level === 'red' || g.level === 'yellow') urgent.push(g); else affected.push(g); });
+    var lastHole = d.holes.length - 1;
+    function row(g, actionable) {
+      var b = d.byId[g.bookingId];
+      var alert = d.live.alerts[g.bookingId] || {};
+      var age = isNum(g.lastEventT) ? Math.max(0, d.now - g.lastEventT) : null;
+      var canYield = actionable && g.holeIdx < lastHole && (g.playThroughSuggested || (g.level === 'red' && g.cause === 'OWN' && g.behindId));
+      var dot = UI.dot(g.level, g.cause, g.effLag);
+      var parts = [
+        dot || '<span class="tiny">正常</span>',
+        '<b>第 ' + g.holeNo + ' 洞</b>',
+        '<span class="num">' + groupLabel(b) + '</span>',
+        lagLabel(g) ? '<span class="num">' + lagLabel(g) + '</span>' : '',
+        g.holdCount > 0 ? '<span>影响 ' + g.holdCount + ' 组</span>' : '',
+        memberDots(b),
+        caddieHtml(s, b),
+        age != null ? '<span class="tiny">' + ageLabel(age) + '</span>' : '',
+        g.playThroughSuggested ? '<span class="chip status bad">建议让行</span>' : '',
+        g.snoozed ? '<span class="tiny">已催促 ' + hm(isNum(alert.ackedAt) ? alert.ackedAt : alert.snoozeUntil) + '</span>' : ''
+      ];
+      var acts = '<span class="acts"><button class="btn btn-sm" type="button" data-act="select" data-id="' + esc(b.id) + '">详情</button>';
+      if (actionable) {
+        acts += '<button class="btn btn-sm btn-primary" type="button" data-act="urge" data-id="' + esc(b.id) + '"' + (g.snoozed ? ' disabled' : '') + '>催促</button>' +
+          (canYield ? '<button class="btn btn-sm" type="button" data-act="yield" data-id="' + esc(b.id) + '" data-behind="' + esc(g.behindId || '') + '">让行</button>' : '') +
+          '<button class="btn btn-sm btn-secondary" type="button" data-act="ignoreAlert" data-id="' + esc(b.id) + '">忽略</button>';
+      }
+      acts += '</span>';
+      return '<div class="marshal-row' + (g.level === 'red' ? ' red' : '') + (g.snoozed ? ' snoozed' : '') + '" data-id="' + esc(b.id) + '">' +
+        '<span class="grow">' + parts.filter(Boolean).join(' ') + '</span>' + acts + '</div>';
+    }
+    var html = urgent.length ? urgent.map(function (g) { return row(g, true); }).join('') : '<p class="hint">当前没有需要催促的球组。' + legend + '</p>';
+    if (affected.length) {
+      var open = affectedOpen == null ? !urgent.length : affectedOpen;
+      html += '<details class="marshal-affected"' + (open ? ' open' : '') + '><summary class="hint" style="cursor:pointer;margin:6px 0">受影响但正常 ' + affected.length + ' 组（被前组阻挡 / 后面有球组等候，无需催促）</summary>' +
+        affected.map(function (g) { return row(g, false); }).join('') + '</details>';
+    }
+    return html;
+  }
+  function drawerHtml(d) {
+    var s = d.s, cfg = d.cfg, now = d.now;
+    var b = selectedId ? d.byId[selectedId] : null;
+    if (!b) return '<h3>球组详情</h3><p class="hint">点击位置条上的球组、巡查建议中的「详情」或发球表中的「查看」，这里会显示逐洞实际 / 参考时间与巡查事件按钮。</p>';
+    var g = d.live.byId[b.id] || null;
+    var evs = eventsOf(s, b.id);
+    var prog = Live.deriveProgress(b, evs, d.holes);
+    var started = prog.phase !== 'notStarted';
+    var ref = started ? Live.reference(prog, d.holes, cfg, d.hold, b.planSnapshot) : null;
+    var proj = d.live.projections.byId[b.id] || null;
+    var plan = d.plans[b.id], r = d.rec(b);
+    var onCourse = !!(g && (g.phase === 'playing' || g.phase === 'between'));
+
+    var html = '<h3>' + groupLabel(b) + ' ' + UI.chipGroup(b) + ' ' + UI.statusChip(b.status) + (onCourse ? ' ' + UI.dot(g.level, g.cause, g.lag) : '') + '</h3>';
+    html += '<div class="players" style="margin-bottom:6px">' + (b.players || []).map(UI.chipPlayer).join(' ') + ' ' + caddieHtml(s, b) + '</div>';
+    function kv(k, v) { return '<div class="kv"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>'; }
+    var phaseText = prog.phase === 'playing' ? '正在打第 ' + prog.holeNo + ' 洞' : prog.phase === 'between' ? '前往第 ' + prog.holeNo + ' 洞' : PHASE_TEXT[prog.phase];
+    html += kv('当前位置', phaseText);
+    html += kv('预订 / 实际开球', hm(b.teeMin) + (isNum(prog.teeOffActual) ? ' / ' + hm(prog.teeOffActual) + (prog.teeOffActual - b.teeMin >= 1 ? '（延迟 ' + prime(prog.teeOffActual - b.teeMin) + '）' : '') : ''));
+    if (onCourse) {
+      html += kv('落后（相对标准进度）', fix(g.lag) + ' 分');
+      html += kv('前方空档', g.openAhead == null || !isFinite(g.openAhead) ? '无阻挡' : fix(g.openAhead) + ' 分');
+      html += kv('自身落后 / 原因', fix(g.effLag) + ' 分 · ' + CAUSE_TEXT[g.cause]);
+      html += kv('预警级别', (g.level === 'green' && g.cause === 'AHEAD' ? '被前组阻挡（不计入自身超时）' : LEVEL_TEXT[g.level]) + (isNum(g.since) ? '（自 ' + hm(g.since) + '）' : '') + (g.snoozed ? ' · 已催促' : ''));
+      html += kv(g.phase === 'playing' ? '本洞剩余' : '下一洞开球', g.phase === 'playing' ? UI.fmtRemaining(g.remainingMin, g.overMin) : '预计 ' + hm(now + (g.remainingMin || 0)));
+      html += kv('预计完成', isNum(g.etaRoundMin) ? hm(now + g.etaRoundMin) + '（还需 ' + Course.fmtDur(g.etaRoundMin) + '）' : '—');
+      html += kv('前组 / 后组', (g.aheadId && d.byId[g.aheadId] ? groupLabel(d.byId[g.aheadId]) + (g.holesAhead > 0 ? '（领先 ' + g.holesAhead + ' 洞）' : '（同一洞）') : '领先') + ' / ' +
+        (g.behindId && d.byId[g.behindId] ? groupLabel(d.byId[g.behindId]) + (g.behindWaiting ? '（等候中）' : '') : '无') + (g.holdCount ? ' · 影响 ' + g.holdCount + ' 组' : ''));
+    } else if (g && g.phase === 'notStarted') {
+      html += kv('预计开球', hm(g.nextTeeEta) + (d.next && d.next.id === b.id ? ' · 建议 ' + hm(d.sendAt(b)) : ''));
+    } else if (b.status === 'finished') {
+      html += kv('完成', hm(b.finishedAt) + (isNum(b.fRound) ? ' · 实测步速 ' + b.fRound.toFixed(2) + '（有效洞 ' + (b.cleanHoles || 0) + '）' : ' · 有效洞不足，未计入步速'));
+    }
+    html += kv('计划步速 / 后组间隔', plan.fPlan.toFixed(2) + (plan.confident ? '（可信）' : '（样本不足，按保守估计）') + ' · ' + r.interval + '′' + esc(planTag(plan, r)));
+
+    // 让行建议
+    var pt = b.playThrough || null;
+    if (g && g.playThroughSuggested) {
+      var behind = g.behindId && d.byId[g.behindId];
+      html += '<div class="banner alert" style="margin:10px 0"><b>后组' + (behind ? '（' + groupLabel(behind) + '）' : '') + '正在等候，建议下一洞让后组先打</b>' +
+        '<button class="btn btn-sm btn-primary" type="button" data-act="yield" data-id="' + esc(b.id) + '" data-behind="' + esc(g.behindId || '') + '">已让行</button>' +
+        '<button class="btn btn-sm btn-secondary" type="button" data-act="ptIgnore" data-id="' + esc(b.id) + '">忽略</button></div>';
+    } else if (pt && pt.decision === 'accepted') {
+      html += '<div class="banner" style="margin:10px 0">已于 ' + hm(pt.decidedAt) + ' 让 ' + (d.byId[pt.behindId] ? groupLabel(d.byId[pt.behindId]) : '后组') + ' 先过（第 ' + ((pt.fromHoleIdx || 0) + 1) + ' 洞起）</div>';
+    } else if (pt && pt.decision === 'ignored') {
+      html += '<div class="banner" style="margin:10px 0">让行建议已于 ' + hm(pt.decidedAt) + ' 忽略</div>';
+    }
+
+    // 巡查事件按钮
+    if (ACTIVE[b.status]) {
+      var defNo = prog.phase === 'notStarted' ? d.holes[0].no : (prog.holeIdx >= 0 && prog.holeIdx < d.holes.length ? d.holes[prog.holeIdx].no : d.holes[d.holes.length - 1].no);
+      var selNo = evHole != null && d.holes.some(function (h) { return h.no === evHole; }) ? evHole : defNo;   // 值班员选过的洞跨重绘保留
+      html += '<h4>巡查记录事件 <span class="hint">来源：巡查</span></h4><div class="form-row"><label for="ev-hole" style="min-width:auto">洞</label><select id="ev-hole" class="input" style="padding:6px 8px">' +
+        d.holes.map(function (h) { return '<option value="' + h.no + '"' + (h.no === selNo ? ' selected' : '') + '>' + h.no + '</option>'; }).join('') + '</select>' +
+        '<button class="btn btn-sm" type="button" data-act="ev" data-type="arriveTee" data-id="' + esc(b.id) + '">已到发球台</button>' +
+        '<button class="btn btn-sm btn-primary" type="button" data-act="ev" data-type="teeOff" data-id="' + esc(b.id) + '">已开球</button>' +
+        '<button class="btn btn-sm" type="button" data-act="ev" data-type="leaveGreen" data-id="' + esc(b.id) + '">已离开果岭</button></div>';
+    }
+
+    // 逐洞:参考 vs 实际(未发生的用预计,灰色)
+    html += '<h4>逐洞时间 <span class="hint">黑 = 实际 · 灰 = 预计 · 参考 = 实际开球时刻起按标准时间推算（含全场暂停）</span></h4>';
+    html += '<div class="table-wrap"><table class="table"><thead><tr><th>洞</th><th>Par</th><th>标准</th><th>参考开始</th><th>开始</th><th>参考结束</th><th>结束</th><th>偏差</th></tr></thead><tbody>';
+    d.holes.forEach(function (h, i) {
+      var a = prog.actuals[i] || {};
+      var pr = proj && proj.rows && proj.rows[i];
+      var cell = function (actual, projected) {
+        if (isNum(actual)) return '<b class="num">' + hm(actual) + '</b>';
+        if (pr && isNum(projected)) return '<span class="proj num">' + hm(projected) + '</span>';
+        return '—';
+      };
+      var dev = '';
+      if (ref && isNum(a.start)) { var dv = a.start - ref[i].start; dev = '<span class="num' + (dv >= 1 ? ' warn-text' : '') + '">' + (dv >= 0 ? '+' : '−') + Math.round(Math.abs(dv)) + '′</span>'; }
+      var cur = started && prog.phase !== 'done' && i === prog.holeIdx;
+      html += '<tr' + (cur ? ' class="cur"' : '') + '><td>' + h.no + '</td><td>' + h.par + '</td><td>' + h.std + '′</td>' +
+        '<td>' + (ref ? '<span class="num">' + hm(ref[i].start) + '</span>' : '—') + '</td><td>' + cell(a.start, pr && pr.start) + '</td>' +
+        '<td>' + (ref ? '<span class="num">' + hm(ref[i].finish) + '</span>' : '—') + '</td><td>' + cell(a.finish, pr && pr.finish) + '</td><td>' + dev + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+
+    // 事件
+    html += '<h4>事件（最近 12 条）</h4><div class="event-list">';
+    if (!evs.length) html += '<span>尚无事件</span>';
+    evs.slice(-12).reverse().forEach(function (e) {
+      html += '<div><span class="num">' + hm(e.t) + '</span> 第 ' + e.holeNo + ' 洞 ' + (EV_TEXT[e.type] || e.type) + ' <span class="tiny">' + (SRC_TEXT[e.source] || e.source || '') + '</span></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // ---------- 3. 并组建议 ----------
+  function renderMerge(d) {
+    var s = d.s, peak = !!s.sheet.peakMode;
+    UI.setRegion('merge-head',
+      '<div class="banner' + (peak ? '' : ' warn') + '"><b>旺季模式：' + (peak ? '开' : '关') + '</b><span>需双方确认；会员优先保留原时间。</span>' +
+      (peak ? '<span>系统持续复核：时段不再可行的提议会自动撤回。</span>' : '<span>开启旺季模式（或利用率 ≥ 85%）后出现并组建议。</span>') +
+      '<button class="btn btn-sm" type="button" data-act="togglePeak">' + (peak ? '关闭' : '开启') + '旺季模式</button></div>');
+    var list = s.proposals.slice().sort(function (a, b) {
+      var oa = POPEN[a.status] ? 0 : 1, ob = POPEN[b.status] ? 0 : 1;
+      if (oa !== ob) return oa - ob;
+      if (oa === 0 && a.score !== b.score) return b.score - a.score;
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+    if (!list.length) {
+      UI.setRegion('merge-list', '<p class="hint">暂无并组建议。条件：两组开球相隔 ≤ 30 分钟、每方 ≤ 2 人、合计 ≤ 4 人、步速相近、双方允许并组，且并组后不推迟任何后组。</p>');
+      return;
+    }
+    UI.setRegion('merge-list', list.map(function (p) { return proposalHtml(d, p); }).join(''));
+  }
+  function partyHtml(d, side, b, p) {
+    if (!b) return '<div class="party">球组不存在</div>';
+    var keep = p.keep === side;
+    var dec = p.decisions && p.decisions[side];
+    var plan = d.plans[b.id];
+    return '<div class="party"><b>' + side.toUpperCase() + ' 方 · ' + hm(b.teeMin) + '</b> ' + UI.chipGroup(b) + (keep ? ' <span class="chip status">保留原时间</span>' : '') +
+      '<div style="margin:6px 0">' + (b.players || []).map(UI.chipPlayer).join(' ') + '</div>' +
+      '<div class="tiny">计划步速 ' + (plan ? plan.fPlan.toFixed(2) : '—') + (dec ? ' · ' + (dec === 'accept' ? '已接受' : '已拒绝') : '') + (b.status !== 'booked' && b.status !== 'checkedIn' ? ' · 状态已变化（' + (b.status === 'merged' ? '已合并' : b.status === 'onCourse' ? '场上' : b.status) + '）' : '') + '</div></div>';
+  }
+  function proposalHtml(d, p) {
+    var a = d.byId[p.a], b = d.byId[p.b];
+    var st = p.status;
+    var acts = [];
+    function act(name, label, cls, extra) {
+      acts.push('<button class="btn btn-sm' + (cls ? ' ' + cls : '') + '" type="button" data-act="' + name + '" data-pid="' + esc(p.id) + '"' + (extra || '') + '>' + label + '</button>');
+    }
+    if (st === 'suggested') act('propose', '发送提议', 'btn-primary');
+    if (st === 'proposed' || st === 'accepted_a' || st === 'accepted_b') {
+      if (store.demo) {
+        if (!(p.decisions && p.decisions.a === 'accept')) act('simAccept', '模拟 A 接受', '', ' data-side="a"');
+        if (!(p.decisions && p.decisions.b === 'accept')) act('simAccept', '模拟 B 接受', '', ' data-side="b"');
+        act('simDecline', '模拟拒绝', '', ' data-side="' + (p.decisions && p.decisions.a === 'accept' ? 'b' : 'a') + '"');
+      }
+      act('withdraw', '撤回', 'btn-secondary');
+    }
+    if (st === 'confirmed') { act('apply', '应用并组', 'btn-primary'); act('withdraw', '撤回', 'btn-secondary'); }
+    var statusCls = st === 'applied' || st === 'confirmed' ? ' on-course' : (st === 'declined' || st === 'expired' || st === 'withdrawn' ? ' done' : '');
+    return '<div class="proposal" data-pid="' + esc(p.id) + '">' +
+      '<div class="form-row" style="justify-content:space-between"><b>并组建议 · 匹配度 ' + Math.round(p.score) + '</b><span class="tiny" style="margin-left:6px">释放 1 个时段 · 步速相近</span><span class="chip status' + statusCls + '">' + (PSTATUS[st] || st) + '</span></div>' +
+      '<div class="parties">' + partyHtml(d, 'a', a, p) + '<div class="arrow" aria-hidden="true">→</div>' + partyHtml(d, 'b', b, p) + '</div>' +
+      '<div style="margin-top:8px">' +
+      '<div class="kv"><span class="k">并组后开球</span><span class="v">' + hm(p.targetTeeMin) + '（' + ((a ? a.size : 0) + (b ? b.size : 0)) + ' 人，保留 ' + p.keep.toUpperCase() + ' 方时间）</span></div>' +
+      '<div class="kv"><span class="k">释放时段</span><span class="v">' + hm(p.freedTeeMin) + '</span></div>' +
+      '<div class="kv"><span class="k">有效期至</span><span class="v">' + hm(p.expiresAt) + (p.proposedAt != null ? ' · 发送于 ' + hm(p.proposedAt) : '') + '</span></div></div>' +
+      (st === 'expired' ? '<p class="hint" style="margin-top:6px">并组提议须在开球前 ' + d.cfg.merge.expireBeforeTeeMin + ' 分钟（' + hm(p.expiresAt) + '）之前由双方确认，现已过期；' +
+        (p.note && p.note !== '已过期' ? esc(p.note) + '。' : '') + '重新开启旺季模式不会恢复已过期的提议。</p>' :
+        (p.note ? '<p class="hint" style="margin-top:6px">' + esc(p.note) + '</p>' : '')) +
+      (acts.length ? '<div class="actions-row" style="margin-top:10px">' + acts.join('') + '</div>' : '') + '</div>';
+  }
+
+  // ---------- 4. 球场参数 ----------
+  function renderParams(d) {
+    var s = d.s, cfg = d.cfg, course = s.course;
+    var derived = Course.derivedIBase(d.holes, cfg), B = Course.bottleneck(d.holes, 1);
+    var warn = cfg.iBase < derived ? ' <span class="warn-text">⚠ 设置值低于推导值，后组将在瓶颈洞等待</span>' : '';
+    var fields = ['par', 'std', 'transit', 'clearFrac', 'minGap', 'minFollow'];
+    var steps = { par: 1, std: 0.5, transit: 0.5, clearFrac: 0.05, minGap: 0.5, minFollow: 0.5 };
+    var rows = course.holes.map(function (h) {
+      return '<tr><td>' + h.no + (h.yards ? ' <span class="tiny">' + h.yards + ' 码</span>' : '') + '</td>' + fields.map(function (f) {
+        return '<td><input type="number" step="' + steps[f] + '" min="0" data-no="' + h.no + '" data-field="' + f + '" value="' + h[f] + '" aria-label="第 ' + h.no + ' 洞 ' + f + '"></td>';
+      }).join('') + '</tr>';
+    }).join('');
+    UI.setRegion('params-holes',
+      '<div class="card"><h3>球洞标准时间 <span class="hint">默认 3 杆 7 分 · 4 杆 11 分 · 5 杆 15 分；转场 = 上洞果岭到本洞发球台的车程；清空比例 = 后组可开球前前组需完成的比例（3 杆洞 100%）</span></h3>' +
+      '<div class="table-wrap"><table class="table"><thead><tr><th>洞</th><th>Par</th><th>标准（分）</th><th>转场（分）</th><th title="后组可开球前前组需完成的比例">清空比例（0–1）</th><th>最小间隔（分）</th><th>最小跟随（分）</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="actions-row" style="margin-top:10px"><button class="btn btn-primary" type="button" data-act="saveHoles">保存球洞</button>' +
+      '<button class="btn btn-secondary" type="button" data-act="resetCal">恢复默认 7/11/15</button>' +
+      '<span class="hint">推导基础间隔 I<sub>base</sub> = ' + derived + '′（瓶颈清空 ' + B.toFixed(1) + '′ + 缓冲 ' + cfg.buffer + '′）· 当前设置 ' + cfg.iBase + '′' + warn + '</span></div></div>');
+
+    function num(id, label, val, step) {
+      return '<div class="form-row"><label for="' + id + '">' + label + '</label><input type="number" id="' + id + '" step="' + (step || 1) + '" value="' + val + '"></div>';
+    }
+    UI.setRegion('params-config',
+      '<div class="card"><h3>派发与预警参数</h3><div class="grid three">' +
+      '<div>' + num('c-iBase', '基础间隔 I_base', cfg.iBase) + num('c-iMin', '最小间隔 iMin', cfg.iMin) + num('c-iMax', '常规上限 iMax', cfg.iMax) + num('c-iHardMax', '慢组上限 iHardMax', cfg.iHardMax) + '</div>' +
+      '<div>' + num('c-yellowOn', '黄点阈值（分）', cfg.yellowOn, 0.5) + num('c-yellowOff', '黄点解除（分）', cfg.yellowOff, 0.5) + num('c-redOn', '红点阈值（分）', cfg.redOn, 0.5) + num('c-redOff', '红点解除（分）', cfg.redOff, 0.5) + '</div>' +
+      '<div><div class="form-row"><label for="c-lagRef">滞后参考</label><select id="c-lagRef" class="input"><option value="standard"' + (cfg.lagReference === 'standard' ? ' selected' : '') + '>标准时间</option><option value="plan"' + (cfg.lagReference === 'plan' ? ' selected' : '') + '>预订时的投影</option></select></div>' +
+      '<div class="form-row"><label class="switch"><input type="checkbox" id="c-posAware"' + (cfg.positionAware ? ' checked' : '') + '> 位置感知（只追究前方空档部分）</label></div>' +
+      num('c-snooze', '催促后静默（分）', cfg.snoozeMin) + num('c-fieldBanner', '全场延误横幅阈值', cfg.fieldDelayBannerMin) + '</div></div>' +
+      '<div class="actions-row" style="margin-top:6px"><button class="btn btn-primary" type="button" data-act="saveConfig">保存参数</button>' +
+      '<span class="hint">引擎版本 ' + esc(cfg.engineVersion) + ' · 球场布局版本 ' + esc(String(course.layoutVersion)) + ' · 步速因子范围 ' + cfg.fMin + '–' + cfg.fMax + '</span></div></div>');
+
+    // 校准建议(窗口内观测)
+    var win = cfg.calibration.windowDays;
+    var obs = (s.observations || []).filter(function (o) { var dd = Course.daysBetween(o.date, s.date); return !isFinite(dd) || (dd >= 0 && dd <= win); });
+    var cal = Learn.calibrate(obs, course.holes, cfg);
+    var anySug = cal.some(function (c) { return c.suggested.std != null || c.suggested.transit != null; });
+    var calRows = cal.map(function (c) {
+      var sug = [];
+      if (c.suggested.std != null) sug.push('标准 ' + c.suggested.std + '′');
+      if (c.suggested.transit != null) sug.push('转场 ' + c.suggested.transit + '′');
+      return '<tr><td>' + c.holeNo + '</td><td class="num">' + c.n + ' / ' + c.nTransit + '</td><td class="num">' + c.current.std + '′ / ' + c.current.transit + '′</td>' +
+        '<td class="num">' + (isNum(c.observed.std) ? c.observed.std.toFixed(1) + '′' : '—') + ' / ' + (isNum(c.observed.transit) ? c.observed.transit.toFixed(1) + '′' : '—') + '</td>' +
+        '<td>' + (sug.length ? '<b>' + sug.join(' · ') + '</b>' : '<span class="tiny">' + (c.n < cfg.calibration.minN ? '样本不足' : '无需调整') + '</span>') + '</td>' +
+        '<td class="num">' + c.effectOnIBase + '′</td><td>' + (sug.length ? '<button class="btn btn-sm" type="button" data-act="adopt" data-no="' + c.holeNo + '">采纳</button>' : '') + '</td></tr>';
+    }).join('');
+    UI.setRegion('params-cal',
+      '<div class="card"><h3>校准建议 <span class="hint">按实际观测（未被前组阻挡的洞）的原始分钟中位数，样本 ≥ ' + cfg.calibration.minN + ' 且偏差 ≥ ' + cfg.calibration.stdDeltaMin + ' 分才建议；近 ' + win + ' 天 ' + obs.length + ' 条观测</span></h3>' +
+      '<div class="table-wrap"><table class="table"><thead><tr><th>洞</th><th>样本 n / 转场</th><th>当前 标准 / 转场</th><th>观测 中位 / P20</th><th>建议</th><th>采纳后 I_base</th><th></th></tr></thead><tbody>' + calRows + '</tbody></table></div>' +
+      '<div class="actions-row" style="margin-top:10px"><button class="btn btn-primary" type="button" data-act="adoptAll"' + (anySug ? '' : ' disabled') + '>全部采纳</button>' +
+      '<button class="btn btn-secondary" type="button" data-act="resetCal">恢复默认 7/11/15</button>' +
+      '<label class="switch"><input type="checkbox" id="c-autoCal" data-act-change="autoCal"' + (cfg.calibration.autoCalibrate ? ' checked' : '') + '> 自动校准（每 ' + cfg.calibration.stepEveryDays + ' 天，每次最多 ±' + cfg.calibration.maxStepStd + ' 分）</label></div></div>');
+
+    // 球童
+    var cRows = s.caddies.map(function (c) {
+      var todays = s.bookings.filter(function (b) { return ACTIVE[b.status] && (b.caddieIds || []).indexOf(c.id) >= 0; }).map(groupLabel).join('、');
+      return '<tr><td class="num">' + esc(c.no) + '</td><td>' + esc(c.name) + '</td><td>' + (c.status === 'active' ? '<span class="chip status on-course">在职</span>' : '<span class="chip status">待批准</span>') + '</td>' +
+        '<td>' + (todays || '<span class="tiny">—</span>') + '</td><td>' + (c.status === 'pending' ? '<button class="btn btn-sm btn-primary" type="button" data-act="approve" data-id="' + esc(c.id) + '">批准</button>' : '') + '</td></tr>';
+    }).join('');
+    UI.setRegion('params-caddies',
+      '<div class="card"><h3>球童 <span class="hint">球童在客户端用编号注册，批准后才能记录事件与评分；评分互相不可见</span></h3>' +
+      '<div class="table-wrap"><table class="table"><thead><tr><th>编号</th><th>姓名</th><th>状态</th><th>今日球组</th><th></th></tr></thead><tbody>' + (cRows || '<tr><td colspan="5" class="tiny">暂无球童</td></tr>') + '</tbody></table></div></div>');
+  }
+
+  // ---------- 渲染入口 ----------
+  function render() {
+    if (!store) return;
+    var s = store.getState();
+    if (!s || !s.course || !s.sheet) return;
+    var d = derive(s);
+    renderHeader(d);
+    if (tab === 'sheet') renderSheet(d);
+    else if (tab === 'live') renderLive(d);
+    else if (tab === 'merge') renderMerge(d);
+    else renderParams(d);
+    markScrollable();
+  }
+  // 手机上会横向滚动的表格(逐洞 / 参数):加「左右滑动」提示
+  function markScrollable() {
+    var wraps = document.querySelectorAll('.panel:not(.hidden) .table-wrap');
+    for (var i = 0; i < wraps.length; i++) wraps[i].classList.toggle('scrollable', wraps[i].scrollWidth > wraps[i].clientWidth + 1);
+  }
+  function switchTab(name) {
+    if (TABS.indexOf(name) < 0) name = 'sheet';
+    tab = name;
+    var tabs = $('tabs').querySelectorAll('[data-tab]');
+    for (var i = 0; i < tabs.length; i++) {
+      var on = tabs[i].getAttribute('data-tab') === name;
+      tabs[i].classList.toggle('on', on);
+      tabs[i].setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+    TABS.forEach(function (t) { $('panel-' + t).classList.toggle('hidden', t !== name); });
+    var p = loadPrefs(); p.tab = name; savePrefs(p);
+    render();
+  }
+
+  // 命令封装:成功 toast,失败 toast 错误信息
+  function run(name, payload, okMsg) {
+    return store.command(name, payload).then(function (r) { if (okMsg) UI.toast(okMsg); return r; }, function (e) { UI.toast(e && e.message ? e.message : '操作失败'); });
+  }
+
+  // ---------- 事件委托(每个区域一个监听器) ----------
+  function bind() {
+    // 页签
+    UI.delegate($('tabs'), 'click', '[data-tab]', function (ev, el, data) { el.blur(); switchTab(data.tab); });
+
+    // 顶栏演示控制(静态元素)
+    UI.on($('demo-toggle'), 'click', function () {
+      var open = document.querySelector('.topbar').classList.toggle('demo-open');
+      $('demo-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    UI.on($('demo-speed'), 'change', function (ev) { if (store.demo) { store.demo.setSpeed(Number(ev.target.value)); render(); } });
+    UI.on($('jump-btn'), 'click', function () {
+      if (!store.demo) return;
+      var min = Course.parseHM($('jump-time').value);
+      var now = store.demo.now();
+      if (!isNum(min)) { UI.toast('请填写要跳到的时间'); return; }
+      if (min <= now) { UI.toast('演示时钟只能向后跳（当前 ' + hm(now) + '）'); return; }
+      if (min > DAY_END) min = DAY_END;
+      store.demo.jumpTo(min);
+      UI.toast('已跳到 ' + hm(min));
+    });
+    UI.on($('auto-send'), 'change', function (ev) { if (store.demo) { store.demo.setAutoSend(ev.target.checked); UI.toast(ev.target.checked ? '自动开球：开' : '自动开球：关，由值班员手动开球'); } });
+    UI.on($('reset-btn'), 'click', function () {
+      if (!store.demo) return;
+      if (!UI.confirm('重置演示数据并回到 06:20？')) return;
+      closeForm(); selectedId = null;
+      store.demo.reset();
+      $('demo-speed').value = String(store.demo.speed);
+      $('auto-send').checked = store.demo.autoSend;
+      UI.toast('演示已重置');
+    });
+
+    // 发球表
+    UI.on($('f-size'), 'change', syncPlayerRows);
+    UI.delegate($('panel-sheet'), 'click', '[data-act]', function (ev, el, data) {
+      el.blur();
+      var act = data.act, id = data.id;
+      var s = store.getState(), d = derive(s), b = id ? d.byId[id] : null;
+      if (act === 'newBooking') return openForm({ type: 'new' });
+      if (act === 'closeForm') return closeForm();
+      if (act === 'find') return runFinder(readTime());
+      if (act === 'book') return book(readTime(), false);
+      if (act === 'pick') return book(Number(data.tee), false);
+      if (act === 'force') return book(Number(data.tee), true);
+      if (act === 'togglePeak') return run('setSheet', { patch: { peakMode: !s.sheet.peakMode } }, s.sheet.peakMode ? '已关闭旺季模式' : '已开启旺季模式，并组建议见「并组建议」');
+      if (act === 'setHold') { var v = Math.max(0, Number($('hold-min').value) || 0); return run('fieldHold', { min: v }, v > 0 ? '全场暂停 ' + v + ' 分' : '已解除全场暂停'); }
+      if (act === 'clearHold') return run('fieldHold', { min: 0 }, '已解除全场暂停');
+      if (!b) return;
+      if (act === 'checkIn') return run('checkIn', { id: id }, groupLabel(b) + '已签到');
+      if (act === 'teeOff') return teeOff(d, b);
+      if (act === 'noShow') { if (UI.confirm('将 ' + groupLabel(b) + '标记为未到？')) run('noShow', { id: id }, '已标记未到'); return; }
+      if (act === 'cancel') { if (UI.confirm('取消 ' + groupLabel(b) + '的预订？')) run('cancel', { id: id }, '已取消'); return; }
+      if (act === 'finish') { if (UI.confirm('将 ' + groupLabel(b) + '标记为已完成？')) run('finishManually', { id: id }, '已标记完成'); return; }
+      if (act === 'move') return openForm({ type: 'move', id: id });
+      if (act === 'view') { if (selectedId !== id) evHole = null; selectedId = id; return switchTab('live'); }
+    });
+
+    // 实时场况
+    UI.delegate($('panel-live'), 'click', '[data-act]', function (ev, el, data) {
+      el.blur();
+      var act = data.act, id = data.id;
+      var s = store.getState(), d = derive(s), b = id ? d.byId[id] : null;
+      if (!b) return;
+      if (act === 'select') { if (selectedId !== id) evHole = null; selectedId = id; return render(); }
+      if (act === 'urge') return run('ackAlert', { bookingId: id, action: 'urge' }, '已记录催促 ' + groupLabel(b) + '，' + d.cfg.snoozeMin + ' 分钟内不再提示');
+      if (act === 'ignoreAlert') return run('ackAlert', { bookingId: id, action: 'ignore' }, '已忽略 20 分钟');
+      if (act === 'ptIgnore') return run('playThrough', { bookingId: id, decision: 'ignored' }, '已忽略让行建议');
+      if (act === 'yield') {
+        var g = d.live.byId[id];
+        var behind = data.behind || (g && g.behindId) || (b.playThrough && b.playThrough.behindId);
+        var bb = behind ? d.byId[behind] : null;
+        if (!bb) { UI.toast('没有紧随的后组'); return; }
+        if (!UI.confirm('确认 ' + groupLabel(b) + '已让 ' + groupLabel(bb) + '先过？')) return;
+        return run('playThrough', { bookingId: id, behindId: behind, decision: 'accepted' }, '已记录让行');
+      }
+      if (act === 'ev') {
+        var sel = $('ev-hole');
+        var holeNo = sel ? Number(sel.value) : d.holes[0].no;
+        var tNow = s.now;
+        return store.command('postEvent', { bookingId: id, holeNo: holeNo, type: data.type, source: 'marshal' }).then(function (r) {
+          // 语义去重:同一(组, 洞, 类型)只保留最早一条;返回的事件不是刚记的,说明早已存在
+          if (r && isNum(r.t) && r.t < tNow - EPS && r.source !== 'marshal') UI.toast('该事件已有记录（' + hm(r.t) + ' ' + (SRC_TEXT[r.source] || r.source || '') + '），未重复记录');
+          else if (r && isNum(r.t) && r.t < tNow - EPS) UI.toast('该事件已有记录（' + hm(r.t) + '），未重复记录');
+          else UI.toast('已记录：' + groupLabel(b) + '第 ' + holeNo + ' 洞' + EV_TEXT[data.type]);
+        }, function (e) { UI.toast(e && e.message ? e.message : '操作失败'); });
+      }
+    });
+    UI.delegate($('panel-live'), 'change', '#ev-hole', function (ev, el) { evHole = Number(el.value) || null; });
+    // 折叠区的开合状态保留到下一次重绘(浏览器会先切换 open,这里只记状态,不重绘)
+    UI.delegate($('panel-live'), 'click', '.marshal-affected summary', function (ev, el) { affectedOpen = !el.parentNode.open; });
+
+    // 并组建议
+    UI.delegate($('panel-merge'), 'click', '[data-act]', function (ev, el, data) {
+      el.blur();
+      var act = data.act, pid = data.pid;
+      var s = store.getState();
+      if (act === 'togglePeak') return run('setSheet', { patch: { peakMode: !s.sheet.peakMode } }, s.sheet.peakMode ? '已关闭旺季模式' : '已开启旺季模式');
+      if (!pid) return;
+      if (act === 'propose') return run('proposeMerge', { proposalId: pid }, '提议已发送给双方（客户端会收到并组邀请）');
+      if (act === 'withdraw') return run('withdrawMerge', { proposalId: pid }, '已撤回');
+      if (act === 'apply') return run('applyMerge', { proposalId: pid }, '已并组');
+      if (act === 'simAccept') return run('respondMerge', { proposalId: pid, side: data.side, decision: 'accept' }, '（演示）' + data.side.toUpperCase() + ' 方已接受');
+      if (act === 'simDecline') return run('respondMerge', { proposalId: pid, side: data.side, decision: 'decline' }, '（演示）' + data.side.toUpperCase() + ' 方已拒绝');
+    });
+
+    // 球场参数
+    UI.delegate($('panel-params'), 'click', '[data-act]', function (ev, el, data) {
+      el.blur();
+      var act = data.act;
+      var s = store.getState(), cfg = s.course.config;
+      if (act === 'saveHoles') {
+        var byNo = {};
+        s.course.holes.forEach(function (h) { byNo[h.no] = Object.assign({}, h); });
+        var inputs = $('params-holes').querySelectorAll('input[data-no]');
+        for (var i = 0; i < inputs.length; i++) {
+          var h = byNo[Number(inputs[i].getAttribute('data-no'))];
+          var v = Number(inputs[i].value);
+          if (h && isNum(v) && v >= 0) h[inputs[i].getAttribute('data-field')] = v;
+        }
+        var holes = s.course.holes.map(function (h) { return byNo[h.no]; });
+        return run('saveHoles', { holes: holes }, '球洞参数已保存，推导间隔 ' + Course.derivedIBase(Course.normalizeCourse({ holes: holes, config: cfg }).holes, cfg) + '′');
+      }
+      if (act === 'saveConfig') {
+        var rd = function (id) { var v = Number($(id).value); return isNum(v) ? v : undefined; };
+        var patch = { iBase: rd('c-iBase'), iMin: rd('c-iMin'), iMax: rd('c-iMax'), iHardMax: rd('c-iHardMax'), yellowOn: rd('c-yellowOn'), yellowOff: rd('c-yellowOff'),
+          redOn: rd('c-redOn'), redOff: rd('c-redOff'), snoozeMin: rd('c-snooze'), fieldDelayBannerMin: rd('c-fieldBanner'),
+          lagReference: $('c-lagRef').value === 'plan' ? 'plan' : 'standard', positionAware: $('c-posAware').checked };
+        for (var k in patch) if (patch[k] === undefined) delete patch[k];
+        if (patch.iMin > patch.iMax || patch.iMax > patch.iHardMax) { UI.toast('需满足 iMin ≤ iMax ≤ iHardMax'); return; }
+        if (patch.yellowOn > patch.redOn) { UI.toast('黄点阈值需 ≤ 红点阈值'); return; }
+        return run('saveConfig', { config: patch }, '参数已保存');
+      }
+      if (act === 'adopt' || act === 'adoptAll') {
+        var cal = Learn.calibrate(s.observations || [], s.course.holes, cfg);
+        var picks = [];
+        cal.forEach(function (c) {
+          if (act === 'adopt' && c.holeNo !== Number(data.no)) return;
+          if (c.suggested.std == null && c.suggested.transit == null) return;
+          var pk = { holeNo: c.holeNo };
+          if (c.suggested.std != null) pk.std = c.suggested.std;
+          if (c.suggested.transit != null) pk.transit = c.suggested.transit;
+          picks.push(pk);
+        });
+        if (!picks.length) { UI.toast('没有可采纳的建议'); return; }
+        return run('adoptCalibration', { picks: picks }, '已采纳 ' + picks.length + ' 洞的校准建议');
+      }
+      if (act === 'resetCal') { if (UI.confirm('将全部球洞恢复为默认 7/11/15 分与 2 分转场？')) run('resetCalibration', {}, '已恢复默认'); return; }
+      if (act === 'approve') return run('approveCaddie', { id: data.id }, '球童已批准');
+    });
+    UI.delegate($('panel-params'), 'change', '[data-act-change]', function (ev, el) {
+      if (el.getAttribute('data-act-change') === 'autoCal') run('saveConfig', { config: { calibration: { autoCalibrate: el.checked } } }, el.checked ? '自动校准：开' : '自动校准：关');
+    });
+  }
+
+  // ---------- 启动 ----------
+  // API 模式:每 12 s 轮询增量(后台页签隔次跳过);演示模式由本地时钟驱动,不轮询
+  var pollSkip = false;
+  function setupPolling() {
+    if (pollTimer != null) { clearInterval(pollTimer); pollTimer = null; }
+    if (!store || store.demo || store.mode !== 'api') return;
+    pollTimer = setInterval(function () {
+      if (document.hidden) { pollSkip = !pollSkip; if (pollSkip) return; }
+      var st = store.getState();
+      store.poll(st.seq).then(render, noop);
+    }, POLL_MS);
+  }
+  function applyDemoVisibility() {
+    var els = document.querySelectorAll('.demo-only');
+    for (var i = 0; i < els.length; i++) els[i].classList.toggle('hidden', !store.demo);
+  }
+  function boot() {
+    bind();
+    var prefs = loadPrefs();
+    if (prefs.tab && TABS.indexOf(prefs.tab) >= 0) switchTab(prefs.tab);
+    Store.auto({ date: Store.todayDate(), leader: true }).then(function (st) {
+      store = st;
+      window.HIOTeeConsole = { store: store, render: render, switchTab: switchTab, select: function (id) { selectedId = id; render(); } };
+      applyDemoVisibility();
+      if (store.demo) {
+        store.demo.start();
+        $('demo-speed').value = String(store.demo.speed);
+        $('auto-send').checked = !!store.demo.autoSend;
+        $('jump-time').value = hm(Math.min(DAY_END - 1, Math.ceil(store.demo.now() / 10) * 10 + 60));
+      }
+      store.subscribe(render);
+      setupPolling();
+      store.onModeChange(function (mode) {
+        applyDemoVisibility();
+        if (mode === 'local' && store.demo) store.demo.start();
+        setupPolling();
+        UI.toast(mode === 'api' ? '已重新连接后端' : '后端不可达，切换为演示数据');
+        render();
+      });
+      render();
+    }, function (e) {
+      UI.setRegion('mode-banner', '<b>加载失败：' + esc(e && e.message ? e.message : String(e)) + '</b>');
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+</body>
+</html>
