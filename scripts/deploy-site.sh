@@ -23,17 +23,31 @@ if [ "$before" != "$after" ]; then
   git --no-pager log --oneline "${before}..${after}" | sed 's/^/    /'
 fi
 
-# nginx 配置变化才拷贝 + reload(nginx -t 不通过则不动线上配置)
+# nginx 配置变化才拷贝 + reload(nginx -t 不通过则恢复线上原文件)
+# 恢复用拷贝前的线上快照,不用 git show ${before}:重跑时 before 已经是新提交,会把坏配置写回去。
+RATELIMIT_ZONES=/etc/nginx/conf.d/aigolf-ratelimit.conf
 if ! cmp -s "$NGINX_SRC" "$NGINX_DST"; then
-  cp "$NGINX_SRC" "$NGINX_DST"
-  if nginx -t 2>/dev/null; then
-    systemctl reload nginx
-    echo "[$(date '+%F %T')] nginx conf updated and reloaded"
+  if grep -q 'zone=hio_' "$NGINX_SRC" && [ ! -f "$RATELIMIT_ZONES" ]; then
+    # 站点配置引用了按 IP 限流的 zone,但 zone 文件(后端仓库 scripts/install-nginx-limits.sh 装)还没装:
+    # 这次先不动 nginx,静态文件照常上线;装好 zone 后重跑本脚本即可
+    echo "[$(date '+%F %T')] WARN: $NGINX_SRC uses hio_ rate-limit zones but $RATELIMIT_ZONES is missing;" \
+         "nginx conf NOT updated. Run the backend's scripts/install-nginx-limits.sh, then rerun this script." >&2
   else
-    echo "[$(date '+%F %T')] ERROR: nginx -t failed with the new conf, restoring previous" >&2
-    git show "${before}:nginx/hiogolf-site.conf" > "$NGINX_DST" 2>/dev/null || true
-    nginx -t
-    exit 1
+    prev=$(mktemp)
+    had_prev=0
+    if [ -f "$NGINX_DST" ]; then cp -p "$NGINX_DST" "$prev"; had_prev=1; fi
+    cp "$NGINX_SRC" "$NGINX_DST"
+    if nginx -t; then
+      systemctl reload nginx
+      echo "[$(date '+%F %T')] nginx conf updated and reloaded"
+      rm -f "$prev"
+    else
+      echo "[$(date '+%F %T')] ERROR: nginx -t failed with the new conf, restoring the live copy" >&2
+      if [ "$had_prev" = 1 ]; then cp -p "$prev" "$NGINX_DST"; else rm -f "$NGINX_DST"; fi
+      rm -f "$prev"
+      nginx -t || true
+      exit 1
+    fi
   fi
 fi
 
