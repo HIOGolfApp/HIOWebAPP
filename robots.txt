@@ -1,4 +1,7 @@
 User-agent: *
+# 免登录的球场记分卡接口和球场端接口不给爬(首页用的 course-coverage 不受影响)
+Disallow: /public-api/v1/public/courses
+Disallow: /tee-api/
 Allow: /
 
 Sitemap: https://www.hiogolf.cn/sitemap.xml
