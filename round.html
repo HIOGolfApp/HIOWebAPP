@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- 约球分享落地页:每个 /m/{postId} 都落到本页,页内 JS 取 postId 拉公开数据;瞬时内容不进搜索索引 -->
+<!-- 记分球局分享落地页:/g/{groupId}/{分享码} 都落到本页,页内 JS 取参数拉公开预览;瞬时内容不进搜索索引 -->
 <meta name="robots" content="noindex">
-<title>约球邀请 — 一杆高尔夫</title>
-<meta name="description" content="你收到一个约球邀请。iPhone 用一杆高尔夫 App 打开，安卓或微信用「1杆高尔夫」小程序。">
+<title>球局邀请 — 一杆高尔夫</title>
+<meta name="description" content="你收到一个高尔夫球局邀请。iPhone 用一杆高尔夫 App 打开，安卓或微信用「1杆高尔夫」小程序。">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -88,16 +88,16 @@
 </header>
 
 <main class="wrap">
-  <div class="eyebrow">约球邀请</div>
+  <div class="eyebrow">球局邀请</div>
   <span class="tag" id="tag" hidden></span>
-  <h1 id="title">你收到一个约球邀请</h1>
-  <p class="lead" id="lead">正在加载约球信息…</p>
+  <h1 id="title">你收到一个球局邀请</h1>
+  <p class="lead" id="lead">好友邀你一起下场，同组记分。用一杆高尔夫 App 打开即可加入。</p>
 
   <div class="info" id="info" hidden>
     <div class="row" id="r-course"><span class="k">球场</span><span class="v"></span></div>
-    <div class="row" id="r-time"><span class="k">开球时间</span><span class="v"></span></div>
-    <div class="row" id="r-players"><span class="k">人数</span><span class="v"></span></div>
     <div class="row" id="r-host"><span class="k">发起人</span><span class="v"></span></div>
+    <div class="row" id="r-players"><span class="k">人数</span><span class="v"></span></div>
+    <div class="row" id="r-tees"><span class="k">可选 Tee</span><span class="v"></span></div>
   </div>
 
   <h2 class="paths-h">怎么加入</h2>
@@ -107,9 +107,9 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 12.54c-.03-2.89 2.36-4.28 2.47-4.35-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.73 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.44 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 1.99-.93 3.74-.93s2.24.93 3.77.9c1.56-.03 2.54-1.41 3.49-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.02-3.03-1.16-3.05-4.59zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
         <span>iPhone</span><em class="rec">推荐</em>
       </div>
-      <p id="ios-text">已安装 App：点「打开 App」直接申请加入。未安装：先去 App Store 下载，装好后回到本页点「打开 App」。</p>
+      <p id="ios-text">已安装 App：点「打开 App」直接加入这个球局。未安装：先去 App Store 下载，装好后回到本页点「打开 App」。</p>
       <div class="btns">
-        <a class="btn btn-primary" id="open-app" href="https://api.hiogolf.cn/">打开 App 申请加入</a>
+        <a class="btn btn-primary" id="open-app" href="https://api.hiogolf.cn/">打开 App</a>
         <a class="btn btn-secondary" href="https://apps.apple.com/cn/app/id6789452083">去 App Store 下载</a>
       </div>
       <p class="note">App 需 iOS 18.0 或更高版本。</p>
@@ -126,7 +126,7 @@
         <img class="qr" src="/img/miniprogram-qr.jpg" width="168" height="168" alt="「1杆高尔夫」小程序码">
         <figcaption class="qr-cap" id="qr-cap">用微信扫码或长按识别</figcaption>
       </figure>
-      <p class="next" id="mp-next">进入小程序后：在「首页 → 约球」找到这个球局申请加入。</p>
+      <p class="next" id="mp-next">小程序暂时打不开这条链接：进入小程序并登录后，请发起人加你为球友、在球局里邀请你，入局邀请会出现在小程序首页。</p>
     </section>
   </div>
 </main>
@@ -135,46 +135,59 @@
 
 <script>
 (function () {
-  var m = location.pathname.match(/^\/m\/(\d+)\/?$/);
-  var id = m ? m[1] : null;
+  var m = location.pathname.match(/^\/g\/(\d+)\/([A-Za-z0-9]+)\/?$/);
+  var gid = m ? m[1] : null;
+  var code = m ? m[2].toUpperCase() : null;
 
   setupPaths();
-  if (!id) { notFound(); return; }
-  document.getElementById('open-app').href = 'https://api.hiogolf.cn/m/' + id;
+  if (!gid) {
+    text('lead', '链接不完整，可以请发起人重新分享。');
+    return;
+  }
+  document.getElementById('open-app').href = 'https://api.hiogolf.cn/g/' + gid + '/' + code;
 
-  fetch('/public-api/v1/public/meetups/' + id)
+  // 公开预览:code 须与分享码匹配;不匹配 / 不存在都是 40400
+  fetch('/public-api/v1/public/group-rounds/' + gid + '/preview?code=' + encodeURIComponent(code))
     .then(function (r) { return r.json(); })
     .then(function (body) {
       if (!body || body.code !== 0 || !body.data) { throw new Error('not found'); }
       var d = body.data;
-      text('title', d.title || '一起打球');
-      var t = document.getElementById('tag');
-      t.textContent = d.open ? '报名中' : '已结束报名';
-      t.className = 'tag' + (d.open ? '' : ' muted');
-      t.hidden = false;
-      if (d.open) {
-        text('lead', '用一杆高尔夫 App 或小程序打开，即可申请加入。');
-      } else {
-        text('lead', '这个约球已结束报名。');
+      var host = d.hostNickname || '球友';
+      text('title', host + ' 邀你一起打球');
+      var full = d.maxPlayers && d.playerCount >= d.maxPlayers;
+      var tag = null, lead = null, open = false;
+      if (d.status === 'WAITING' && !full) {
+        tag = '等待开球'; open = true;
+        lead = '同组记分，成绩实时同步。用一杆高尔夫 App 打开即可加入。';
+      } else if (d.status === 'WAITING') {
+        tag = '人数已满'; lead = '这个球局人数已满。';
+      } else if (d.status === 'PLAYING') {
+        tag = '进行中'; lead = '这个球局已经开球。';
+      } else if (d.status === 'FINISHED') {
+        tag = '已结束'; lead = '这个球局已经结束。';
+      }
+      if (tag) {
+        var t = document.getElementById('tag');
+        t.textContent = tag;
+        t.className = 'tag' + (open ? '' : ' muted');
+        t.hidden = false;
+      }
+      if (lead) { text('lead', lead); }
+      if (!open) {
         text('ios-text', '已安装 App：点「打开 App」查看。');
-        text('open-app', '打开 App');
         document.getElementById('mp-next').hidden = true;
       }
-      row('r-course', joinParts([d.courseName || '待定', d.city && d.city !== d.courseName ? d.city : null], ' · '));
-      row('r-time', fmtTime(d.playAt));
-      row('r-players', (d.joinedCount || 1) + (d.maxPlayers ? ' / ' + d.maxPlayers : '') + ' 人');
-      row('r-host', d.hostNickname || '球友');
+      row('r-course', d.courseName);
+      row('r-host', host);
+      row('r-players', d.playerCount != null
+          ? d.playerCount + (d.maxPlayers ? ' / ' + d.maxPlayers : '') + ' 人' : null);
+      row('r-tees', (d.tees || []).map(function (x) { return x && x.name; })
+          .filter(function (x) { return x; }).join(' · '));
       showInfo();
     })
-    .catch(notFound);
-
-  function notFound() {
-    text('title', '约球不存在或已被删除');
-    text('lead', '可以在 App 或小程序的「首页 → 约球」看看其他约球局。');
-    text('ios-text', '已安装 App：打开后在「首页 → 约球」查看。未安装：先去 App Store 下载。');
-    text('open-app', '打开 App');
-    document.getElementById('mp-next').hidden = true;
-  }
+    .catch(function () {
+      text('lead', '暂时读不到球局信息，链接可能已失效，可以请发起人重新分享。');
+    });
 
   // ---- 通用:按环境排两条路、小程序码说明 ----
   function setupPaths() {

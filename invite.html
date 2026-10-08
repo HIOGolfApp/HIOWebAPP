@@ -6,109 +6,205 @@
 <!-- 邀请落地页:每个 /i/{HIO_ID} 都落到本页,页内 JS 解析邀请码;瞬时内容不进搜索索引 -->
 <meta name="robots" content="noindex">
 <title>好友邀请 — 一杆高尔夫</title>
+<meta name="description" content="好友邀请你加入一杆高尔夫。iPhone 下载一杆高尔夫 App，安卓或微信用「1杆高尔夫」小程序。">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<meta name="theme-color" content="#0b3d2e">
+<meta name="theme-color" content="#ffffff">
 <style>
+  /* 与官网首页 / iOS App 同一套设计语言:纯黑白,白底、黑主色、systemGray6 卡片,圆角 12/8,无阴影 */
   :root {
-    --pine: #0b3d2e; --fairway: #1a7a4f; --cream: #f7f5ef;
-    --sand: #efe9dc; --gold: #c9a227; --ink: #1c2420; --ink-soft: #55635c;
-    --line: #e3ded2; --card: #ffffff; --radius: 14px;
+    --ink: #111111; --sub: #6e6e73; --tertiary: #aeaeb2; --fill: #f2f2f7; --line: #e5e5ea;
+    --r-card: 12px; --r-btn: 8px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body {
-    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
-    color: var(--ink); background: var(--pine); min-height: 100vh;
-    display: flex; flex-direction: column; align-items: center;
-    padding: 24px 20px 40px; line-height: 1.7;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #fff; line-height: 1.7; -webkit-font-smoothing: antialiased;
   }
-  .brand { display: flex; align-items: center; gap: 8px; color: var(--cream); font-weight: 700; font-size: 17px; margin: 8px 0 28px; letter-spacing: .5px; }
-  .card {
-    width: 100%; max-width: 420px; background: var(--card);
-    border-radius: var(--radius); padding: 30px 24px 26px; box-shadow: 0 12px 40px rgba(0,0,0,.25);
-    text-align: center;
+  a { color: inherit; text-decoration: none; }
+  .top { border-bottom: 1px solid var(--line); }
+  .top-inner { max-width: 480px; margin: 0 auto; padding: 12px 16px; }
+  .brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; }
+  .brand svg { display: block; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 28px 16px 8px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 3px; color: var(--tertiary); margin-bottom: 8px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; line-height: 1.6; padding: 1px 9px; border-radius: 6px; background: var(--ink); color: #fff; margin-bottom: 8px; }
+  .tag.muted { background: var(--fill); color: var(--sub); }
+  h1 { font-size: 24px; font-weight: 800; line-height: 1.4; margin-bottom: 6px; word-break: break-word; }
+  .lead { font-size: 15px; color: var(--sub); margin-bottom: 20px; }
+  .info { background: var(--fill); border-radius: var(--r-card); padding: 2px 16px; margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .row.last { border-bottom: none; }
+  .row .k { color: var(--sub); flex-shrink: 0; }
+  .row .v { text-align: right; font-weight: 600; word-break: break-word; }
+  .code-box { background: var(--fill); border-radius: var(--r-card); padding: 12px 16px; font-size: 14px; color: var(--sub); margin-bottom: 12px; }
+  .code-box b { color: var(--ink); font-size: 17px; letter-spacing: 2px; margin-left: 6px; font-variant-numeric: tabular-nums; }
+  .paths-h { font-size: 12px; font-weight: 700; letter-spacing: 3px; color: var(--tertiary); margin: 24px 0 10px; }
+  .path { border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px 16px; margin-bottom: 12px; }
+  .path.is-rec { border-color: var(--ink); }
+  .path-h { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .path-h svg { flex-shrink: 0; }
+  .rec { display: none; font-style: normal; font-size: 11.5px; font-weight: 600; padding: 0 7px; border-radius: 6px; background: var(--ink); color: #fff; }
+  .is-rec .rec { display: inline-block; }
+  .path p { font-size: 14px; color: var(--sub); }
+  .path p b { color: var(--ink); font-weight: 600; }
+  .btns { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .btn {
+    flex: 1 1 180px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+    padding: 12px 14px; border-radius: var(--r-btn); font-size: 15px; font-weight: 600; line-height: 1.4;
+    border: none; cursor: pointer; font-family: inherit; text-align: center;
   }
+  .btn-primary { background: var(--ink); color: #fff; }
+  .btn-secondary { background: var(--fill); color: var(--ink); }
+  .path p.note { font-size: 12.5px; color: var(--tertiary); margin-top: 10px; }
+  .nw { white-space: nowrap; }
+  .wx-only { display: none; }
+  .in-wechat .wx-only { display: block; }
+  .qr-box { display: flex; flex-direction: column; align-items: center; margin-top: 14px; }
+  .qr { display: block; width: 168px; height: 168px; }
+  .qr-cap { font-size: 13px; color: var(--sub); margin-top: 6px; text-align: center; }
+  .path p.next { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13.5px; }
+  footer {
+    max-width: 480px; margin: 28px auto 0; padding: 18px 16px 36px; border-top: 1px solid var(--line);
+    text-align: center; font-size: 12.5px; color: var(--sub); line-height: 2;
+  }
+
+  /* 邀请页:邀请人头像 */
   .avatar {
-    width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 14px;
-    background: var(--sand); border: 2px solid var(--gold);
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden; font-size: 30px;
+    width: 64px; height: 64px; border-radius: 50%; margin-bottom: 14px; background: var(--fill);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
   }
   .avatar img { width: 100%; height: 100%; object-fit: cover; }
-  h1 { font-size: 21px; line-height: 1.45; margin-bottom: 10px; word-break: break-word; }
-  h1 .nick { color: var(--fairway); }
-  .sub { font-size: 14px; color: var(--ink-soft); margin-bottom: 20px; }
-  .cta {
-    display: block; width: 100%; text-align: center; padding: 13px 0;
-    background: var(--pine); color: #fff; border: none; border-radius: 999px;
-    font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit;
-  }
-  .cta.done { background: var(--fairway); }
-  .hint { font-size: 12.5px; color: var(--ink-soft); margin-top: 12px; }
-  .steps {
-    margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line);
-    text-align: left; font-size: 13px; color: var(--ink-soft);
-  }
-  .steps p { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
-  .steps .n {
-    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
-    background: var(--sand); color: var(--fairway); font-size: 11px; font-weight: 700;
-    display: inline-flex; align-items: center; justify-content: center; transform: translateY(2px);
-  }
-  .foot { color: rgba(247,245,239,.55); font-size: 12px; margin-top: 26px; text-align: center; }
-  .foot a { color: inherit; }
-  /* 微信内置浏览器引导层 */
+  .btn.done { background: var(--sub); }
+  /* 微信内置浏览器引导层:iPhone 去浏览器打开,安卓 / 不装 App 长按识别小程序码 */
   #wechatMask {
-    display: none; position: fixed; inset: 0; z-index: 99;
-    background: rgba(0,0,0,.75); color: #fff; padding: 24px;
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 99;
+    background: rgba(0,0,0,.8); color: #fff; padding: 16px; overflow-y: auto;
   }
-  #wechatMask .arrow { position: absolute; top: 14px; right: 26px; font-size: 40px; line-height: 1; }
-  #wechatMask .tip { margin-top: 76px; text-align: right; font-size: 17px; line-height: 1.8; }
+  #wechatMask .arrow { position: absolute; top: 8px; right: 22px; font-size: 40px; line-height: 1; }
+  #wechatMask .tip { margin: 60px 4px 0 auto; max-width: 300px; text-align: right; font-size: 16px; line-height: 1.8; }
+  #wechatMask .tip b { font-weight: 700; }
+  .mask-card {
+    background: #fff; color: var(--ink); border-radius: var(--r-card);
+    max-width: 320px; margin: 24px auto 0; padding: 18px 16px 16px; text-align: center;
+  }
+  .mask-card h3 { font-size: 16px; font-weight: 700; }
+  .mask-card p { font-size: 13.5px; color: var(--sub); }
+  .mask-card .qr { margin: 10px auto 4px; }
+  #wechatMask .close {
+    display: block; margin: 18px auto 8px; padding: 8px 24px; background: none; color: #fff;
+    border: 1px solid rgba(255,255,255,.6); border-radius: var(--r-btn); font-size: 14px; font-family: inherit; cursor: pointer;
+  }
 </style>
 </head>
 <body>
-<div class="brand">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 21V4l12 4.5L6 13" stroke="#c9a227" stroke-width="2" stroke-linejoin="round"/><circle cx="6" cy="21" r="1.6" fill="#f7f5ef"/></svg>
-  一杆高尔夫 HIO Golf
-</div>
-
-<div class="card">
-  <div class="avatar" id="avatar">⛳️</div>
-  <h1 id="title">邀请你加入「一杆高尔夫」</h1>
-  <p class="sub" id="sub">记分、约球、找球友,都在一个 App 里</p>
-  <button class="cta" id="copyBtn" type="button">复制邀请码并去下载</button>
-  <p class="hint">装好 App 后注册,邀请会自动生效,无需手动填码</p>
-  <div class="steps">
-    <p><span class="n">1</span>点这里复制邀请链接,并前往 App Store</p>
-    <p><span class="n">2</span>下载并安装「一杆高尔夫」App</p>
-    <p><span class="n">3</span>打开 App 完成注册,即自动与邀请人绑定</p>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="/">
+      <svg width="15" height="26" viewBox="0 0 31.7613 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <ellipse cx="15.8806" cy="51.8209" rx="15.8806" ry="4.1791" fill="#111"/>
+        <path d="M11.7 4.83433C11.7 4.64968 11.8497 4.5 12.0343 4.5H19.7657C19.9503 4.5 20.1 4.64968 20.1 4.83433V49H11.7V4.83433Z" fill="#111"/>
+        <path d="M16.3758 7.79297C16.207 8.44227 15.9892 9.07951 15.7215 9.69824C15.0113 11.3393 13.9722 12.8179 12.6687 14.042C11.3653 15.266 9.82471 16.2098 8.14238 16.8154C7.50783 17.0439 6.85788 17.2209 6.19902 17.3486L6.31523 15.5127C6.72993 15.4145 7.14013 15.2953 7.54277 15.1504C8.9978 14.6265 10.3305 13.8106 11.4578 12.752C12.585 11.6934 13.4833 10.4152 14.0975 8.99609C14.2674 8.60329 14.4119 8.20075 14.5359 7.79297H16.3758Z" stroke="#CB0018" stroke-width="6.58576"/>
+        <circle cx="9.44478" cy="48.4776" r="4.1791" fill="#EAEAEA"/>
+      </svg>
+      一杆高尔夫
+    </a>
   </div>
-</div>
+</header>
 
-<p class="foot">© 一杆高尔夫 · <a href="/">hiogolf.cn</a></p>
+<main class="wrap">
+  <div class="avatar" id="avatar"><svg width="17" height="30" viewBox="0 0 31.7613 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <ellipse cx="15.8806" cy="51.8209" rx="15.8806" ry="4.1791" fill="#111"/>
+        <path d="M11.7 4.83433C11.7 4.64968 11.8497 4.5 12.0343 4.5H19.7657C19.9503 4.5 20.1 4.64968 20.1 4.83433V49H11.7V4.83433Z" fill="#111"/>
+        <path d="M16.3758 7.79297C16.207 8.44227 15.9892 9.07951 15.7215 9.69824C15.0113 11.3393 13.9722 12.8179 12.6687 14.042C11.3653 15.266 9.82471 16.2098 8.14238 16.8154C7.50783 17.0439 6.85788 17.2209 6.19902 17.3486L6.31523 15.5127C6.72993 15.4145 7.14013 15.2953 7.54277 15.1504C8.9978 14.6265 10.3305 13.8106 11.4578 12.752C12.585 11.6934 13.4833 10.4152 14.0975 8.99609C14.2674 8.60329 14.4119 8.20075 14.5359 7.79297H16.3758Z" stroke="#CB0018" stroke-width="6.58576"/>
+        <circle cx="9.44478" cy="48.4776" r="4.1791" fill="#EAEAEA"/>
+      </svg></div>
+  <div class="eyebrow">好友邀请</div>
+  <h1 id="title">邀请你加入一杆高尔夫</h1>
+  <p class="lead" id="lead">记分、约球、找球友，都在这里。</p>
 
-<div id="wechatMask">
-  <div class="arrow">↗</div>
-  <div class="tip">点右上角 「···」<br>选择<strong>「在浏览器打开」</strong><br><br>即可复制邀请链接并前往 App Store</div>
-</div>
+  <h2 class="paths-h">怎么加入</h2>
+  <div id="paths">
+    <section class="path" id="path-ios">
+      <div class="path-h">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 12.54c-.03-2.89 2.36-4.28 2.47-4.35-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.73 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.44 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 1.99-.93 3.74-.93s2.24.93 3.77.9c1.56-.03 2.54-1.41 3.49-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.02-3.03-1.16-3.05-4.59zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
+        <span>iPhone</span><em class="rec">推荐</em>
+      </div>
+      <p id="ios-text">点下方按钮会复制邀请并前往 App Store。装好 App 后注册，邀请会自动生效，无需手动填码。</p>
+      <div class="btns">
+        <button class="btn btn-primary" id="copyBtn" type="button">复制邀请并去 App Store 下载</button>
+      </div>
+      <p class="note">App 需 iOS 18.0 或更高版本。</p>
+      <p class="note wx-only">微信里无法复制邀请并跳转：请点右上角「···」，选择「在默认浏览器中打开」。</p>
+    </section>
+
+    <section class="path" id="path-mp">
+      <div class="path-h">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20.5 14v.01M14 20.5h.01M17 20.5h3.5V17"/></svg>
+        <span>安卓或微信</span><em class="rec">推荐</em>
+      </div>
+      <p>微信搜索<b>「1杆高尔夫」</b>小程序<span class="nw">（阿拉伯数字 1）</span>，或识别下方小程序码，免下载即可使用。用同一手机号登录，和 App 是同一个账号。</p>
+      <figure class="qr-box">
+        <img class="qr" src="/img/miniprogram-qr.jpg" width="168" height="168" alt="「1杆高尔夫」小程序码">
+        <figcaption class="qr-cap" id="qr-cap">用微信扫码或长按识别</figcaption>
+      </figure>
+      <p class="next" id="mp-next" hidden>想加 TA 为球友：进入小程序后，在「消息」页点右上角的搜索，输入 TA 的 HIO 号 <b id="hio"></b>。</p>
+    </section>
+  </div>
+
+  <div id="wechatMask" hidden>
+    <div class="arrow" id="maskArrow">↗</div>
+    <div class="tip" id="maskTip">iPhone：点右上角「···」<br>选择<b>「在默认浏览器中打开」</b><br>即可复制邀请并前往 App Store</div>
+    <div class="mask-card">
+      <h3 id="maskCardTitle">安卓或不想装 App</h3>
+      <img class="qr" src="/img/miniprogram-qr.jpg" width="168" height="168" alt="「1杆高尔夫」小程序码">
+      <p>长按识别小程序码，或微信搜索<b>「1杆高尔夫」</b>小程序，免下载即可使用</p>
+    </div>
+    <button class="close" id="maskClose" type="button">我知道了</button>
+  </div>
+</main>
+
+<footer>© 2026 佛山小白球科技有限责任公司 · 一杆高尔夫 · <a href="/">hiogolf.cn</a></footer>
 
 <script>
 (function () {
   var STORE = 'https://apps.apple.com/cn/app/id6789452083';
-  var m = location.pathname.match(/^\/i\/([A-Za-z0-9]+)$/);
+  var m = location.pathname.match(/^\/i\/([A-Za-z0-9]+)\/?$/);
   var code = m ? m[1] : null;
   var link = code ? 'https://hiogolf.cn/i/' + code : 'https://hiogolf.cn';
-  var isWechat = /MicroMessenger/i.test(navigator.userAgent);
+  var ua = navigator.userAgent || '';
+  var isWechat = /MicroMessenger/i.test(ua);
+  var isAndroid = /Android/i.test(ua);
+  var btn = document.getElementById('copyBtn');
 
-  // —— 微信内置浏览器:剪贴板与跳转 App Store 都不可靠,只留引导层 ——
+  setupPaths();
+  if (code) {
+    text('hio', code.toUpperCase());
+    document.getElementById('mp-next').hidden = false;
+  }
+
+  // —— 微信内置浏览器:剪贴板与跳转 App Store 都不可靠 → 引导层给两条路(iPhone 去浏览器 / 长按识别小程序码) ——
   if (isWechat) {
-    document.getElementById('wechatMask').style.display = 'block';
-    document.getElementById('copyBtn').style.display = 'none';
+    btn.hidden = true;
+    // 微信里按钮已隐藏:说明改成先去浏览器
+    text('ios-text', code
+        ? '在浏览器中打开本页后，点按钮复制邀请并前往 App Store。装好 App 后注册，邀请会自动生效，无需手动填码。'
+        : '在浏览器中打开本页后，点按钮前往 App Store 下载。');
+    if (isAndroid) {
+      // 安卓没有 App:只留小程序码
+      document.getElementById('maskArrow').hidden = true;
+      document.getElementById('maskTip').hidden = true;
+      text('maskCardTitle', '用小程序加入');
+    }
+    var mask = document.getElementById('wechatMask');
+    mask.hidden = false;
+    document.getElementById('maskClose').addEventListener('click', function () { mask.hidden = true; });
   }
 
   // —— 从 UA 解析 OS 版本(iOS "17_5"→"17.5" / Android / macOS),解析不出传 null ——
   function osVersion() {
-    var ua = navigator.userAgent;
     var r = ua.match(/(?:iPhone|iPad|iPod).*?OS (\d+[_.]\d+(?:[_.]\d+)?)/)
          || ua.match(/Android (\d+(?:\.\d+)*)/)
          || ua.match(/Mac OS X (\d+[_.]\d+(?:[_.]\d+)?)/);
@@ -138,15 +234,7 @@
       .then(function (body) {
         if (!body || body.code !== 0 || !body.data) { return; }
         var d = body.data;
-        if (d.nickname) {
-          var h1 = document.getElementById('title');
-          h1.textContent = '';
-          var nick = document.createElement('span');
-          nick.className = 'nick';
-          nick.textContent = d.nickname;
-          h1.appendChild(nick);
-          h1.appendChild(document.createTextNode(' 邀请你加入一杆高尔夫'));
-        }
+        if (d.nickname) { text('title', d.nickname + ' 邀请你加入一杆高尔夫'); }
         if (d.avatarUrl) {
           var img = document.createElement('img');
           img.alt = '';
@@ -162,9 +250,9 @@
   }
 
   // —— 复制邀请链接(必须在点击手势内),带 execCommand 降级,600ms 后跳 App Store ——
-  function fallbackCopy(text) {
+  function fallbackCopy(s) {
     var ta = document.createElement('textarea');
-    ta.value = text;
+    ta.value = s;
     ta.setAttribute('readonly', '');
     ta.style.position = 'fixed';
     ta.style.left = '-9999px';
@@ -177,11 +265,10 @@
     return ok;
   }
 
-  var btn = document.getElementById('copyBtn');
   if (!code) {
     // 无邀请码的通用页:不复制,直接去 App Store
     btn.textContent = '去 App Store 下载';
-    document.querySelector('.hint').textContent = '通过好友的邀请链接打开本页,注册时可获得新人积分';
+    text('ios-text', '在 App Store 下载「一杆高尔夫」App，注册后即可使用。');
   }
   var pending = false;
   btn.addEventListener('click', function () {
@@ -189,8 +276,8 @@
     if (!code) { location.href = STORE; return; }
     pending = true;
     function done() {
-      btn.textContent = '已复制✓';
-      btn.className = 'cta done';
+      btn.textContent = '已复制 ✓';
+      btn.className = 'btn btn-primary done';
       setTimeout(function () {
         pending = false;
         location.href = STORE;
@@ -206,6 +293,72 @@
       done();
     }
   });
+
+  // ---- 通用:按环境排两条路、小程序码说明 ----
+  function setupPaths() {
+    var ua = navigator.userAgent || '';
+    var wechat = /MicroMessenger/i.test(ua);
+    var android = /Android/i.test(ua);
+    var ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    var mobile = ios || android || /Mobile/i.test(ua);
+    var iosCard = document.getElementById('path-ios');
+    var mpCard = document.getElementById('path-mp');
+    if (wechat) { document.documentElement.className += ' in-wechat'; }
+    if (wechat || android) {
+      // 微信内 / 安卓:小程序优先(微信里长按即可识别小程序码)
+      iosCard.parentNode.insertBefore(mpCard, iosCard);
+      mpCard.className += ' is-rec';
+    } else if (ios) {
+      iosCard.className += ' is-rec';
+    }
+    document.getElementById('qr-cap').textContent = wechat ? '长按图片，识别小程序码'
+        : mobile ? '截图后打开微信「扫一扫」，从相册选取识别'
+        : '用手机微信「扫一扫」扫码打开';
+  }
+
+  // parts: 文本片段数组;boldIndex 指定哪一段加粗(邀请码)
+  function setNext(parts, boldIndex) {
+    var el = document.getElementById('mp-next');
+    el.textContent = '';
+    parts.forEach(function (p, i) {
+      if (i === boldIndex) {
+        var b = document.createElement('b');
+        b.textContent = p;
+        el.appendChild(b);
+      } else {
+        el.appendChild(document.createTextNode(p));
+      }
+    });
+    el.hidden = false;
+  }
+  function text(elId, s) { document.getElementById(elId).textContent = s; }
+  function row(rowId, value) {
+    var r = document.getElementById(rowId);
+    if (value == null || value === '') { r.hidden = true; return; }
+    r.querySelector('.v').textContent = value;
+    r.hidden = false;
+  }
+  // 显示信息卡,并去掉最后一个可见行的分隔线
+  function showInfo() {
+    var info = document.getElementById('info');
+    var rows = info.querySelectorAll('.row');
+    var last = null;
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].className = 'row';
+      if (!rows[i].hidden) { last = rows[i]; }
+    }
+    if (last) { last.className = 'row last'; info.hidden = false; }
+  }
+  function joinParts(arr, sep) { return arr.filter(function (x) { return x; }).join(sep) || null; }
+  // 后端时间是北京时间 "2026-10-18T07:30:00",按字面显示,不做时区换算
+  function fmtTime(s) {
+    var t = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(s || '');
+    if (!t) { return s || '待定'; }
+    var day = new Date(+t[1], +t[2] - 1, +t[3]);
+    var wk = '日一二三四五六'.charAt(day.getDay());
+    var year = +t[1] !== new Date().getFullYear() ? t[1] + '年' : '';
+    return year + (+t[2]) + '月' + (+t[3]) + '日（周' + wk + '）' + t[4] + ':' + t[5];
+  }
 })();
 </script>
 </body>

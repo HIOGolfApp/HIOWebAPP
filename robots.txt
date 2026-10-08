@@ -1,4 +1,14 @@
 User-agent: *
 Allow: /
+Disallow: /tee/
+Disallow: /docs/
+Disallow: /scripts/
+Disallow: /nginx/
+# share landing pages (also noindex)
+Disallow: /e/
+Disallow: /g/
+Disallow: /c/
+Disallow: /i/
+Disallow: /m/
 
 Sitemap: https://www.hiogolf.cn/sitemap.xml
