@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>赛事活动 — 一杆高尔夫</title>
+<meta name="description" content="球友在一杆高尔夫发起的公开高尔夫赛事与活动。">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff">
+<link rel="stylesheet" href="/assets/site.css">
+<style>
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .ev { background: var(--fill); border-radius: var(--r-card); overflow: hidden; display: block; }
+  .ev:hover { background: var(--line); }
+  .ev .cover { aspect-ratio: 2 / 1; width: 100%; object-fit: cover; background: var(--line); }
+  .ev .body { padding: 12px 14px 14px; }
+  .ev h3 { font-size: 16px; line-height: 1.4; }
+  .ev .meta { font-size: 13px; color: var(--sub); margin-top: 4px; }
+  .ev .row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .empty { background: var(--fill); border-radius: var(--r-card); padding: 28px 20px; text-align: center; color: var(--sub); font-size: 14.5px; }
+</style>
+</head>
+<body>
+<nav id="site-nav" data-active="events"></nav>
+<main class="wrap">
+  <div class="page-head">
+    <h1>赛事活动</h1>
+    <p>球友在一杆高尔夫发起的公开比赛：主办人建赛、球友报名，赛后自动出成绩排行。私密比赛凭邀请码参加，不在这里展示。</p>
+  </div>
+  <div class="grid" id="list"></div>
+  <div class="state" id="state">加载中…</div>
+</main>
+<footer id="site-footer"></footer>
+<script src="/assets/site.js"></script>
+<script>
+(function () {
+  var H = window.HIO, list = document.getElementById('list'), state = document.getElementById('state');
+  var STATUS = { UPCOMING: ['报名中', true], IN_PROGRESS: ['进行中', true], FINISHED: ['已结束', false], CANCELLED: ['已取消', false] };
+  function card(e) {
+    var img = H.safeImg(e.coverPending ? '' : e.coverUrl) || H.safeImg(e.courseCoverUrl);
+    var st = STATUS[e.status] || [e.status || '', false];
+    var where = [e.courseName, e.courseCity].filter(Boolean).join(' · ');
+    var count = e.playerCount != null ? e.playerCount + (e.maxPlayers ? ' / ' + e.maxPlayers : '') + ' 人' : '';
+    return '<a class="ev" href="/e/' + encodeURIComponent(e.id) + '">'
+      + (img ? '<img class="cover" src="' + img + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '<div class="cover"></div>')
+      + '<div class="body"><h3>' + H.esc(e.name) + '</h3>'
+      + '<div class="meta">' + H.esc([H.fmtTime(e.startsAt), where].filter(Boolean).join(' · ')) + '</div>'
+      + '<div class="row">' + (st[0] ? '<span class="tag' + (st[1] ? ' dark' : '') + '">' + H.esc(st[0]) + '</span>' : '')
+      + (count ? '<span class="tag">' + H.esc(count) + '</span>' : '') + '</div></div></a>';
+  }
+  H.api('/events').then(function (rows) {
+    rows = (rows || []).filter(function (e) { return e.status !== 'CANCELLED'; });
+    if (!rows.length) {
+      state.hidden = true;
+      list.outerHTML = '<div class="empty">暂时没有公开赛事。<br>在一杆高尔夫小程序或 App 的「活动」页可以发起比赛，公开比赛会显示在这里。</div>';
+      return;
+    }
+    list.innerHTML = rows.map(card).join('');
+    state.hidden = true;
+  }).catch(function () { state.textContent = '加载失败，请稍后刷新重试'; });
+})();
+</script>
+</body>
+</html>
