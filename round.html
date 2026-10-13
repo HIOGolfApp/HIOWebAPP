@@ -6,7 +6,7 @@
 <!-- 记分球局分享落地页:/g/{groupId}/{分享码} 都落到本页,页内 JS 取参数拉公开预览;瞬时内容不进搜索索引 -->
 <meta name="robots" content="noindex">
 <title>球局邀请 — 一杆高尔夫</title>
-<meta name="description" content="你收到一个高尔夫球局邀请。iPhone 用一杆高尔夫 App 打开，安卓或微信用「1杆高尔夫」小程序。">
+<meta name="description" content="你收到一个高尔夫球局邀请。可以在一杆高尔夫 App 里打开，也可以直接打开「1杆高尔夫」微信小程序加入。">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -107,10 +107,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 12.54c-.03-2.89 2.36-4.28 2.47-4.35-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.73 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.44 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 1.99-.93 3.74-.93s2.24.93 3.77.9c1.56-.03 2.54-1.41 3.49-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.02-3.03-1.16-3.05-4.59zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
         <span>iPhone</span><em class="rec">推荐</em>
       </div>
-      <p id="ios-text">已安装 App：点「打开 App」直接加入这个球局。未安装：先去 App Store 下载，装好后回到本页点「打开 App」。</p>
+      <p id="ios-text">已安装 App：点「在 App 中打开」直接加入这个球局。未安装会自动转到 App Store，装好后回到本页再点一次。</p>
       <div class="btns">
-        <a class="btn btn-primary" id="open-app" href="https://api.hiogolf.cn/">打开 App</a>
-        <a class="btn btn-secondary" href="https://apps.apple.com/cn/app/id6789452083">去 App Store 下载</a>
+        <button type="button" class="btn btn-primary" id="open-app">在 App 中打开</button>
+        <a class="btn btn-secondary" id="store-link" href="https://apps.apple.com/cn/app/id6789452083">去 App Store 下载</a>
       </div>
       <p class="note">App 需 iOS 18.0 或更高版本。</p>
       <p class="note wx-only">微信里无法直接打开 App：请点右上角「···」，选择「在默认浏览器中打开」后再点按钮。</p>
@@ -121,12 +121,15 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20.5 14v.01M14 20.5h.01M17 20.5h3.5V17"/></svg>
         <span>安卓或微信</span><em class="rec">推荐</em>
       </div>
-      <p>微信搜索<b>「1杆高尔夫」</b>小程序<span class="nw">（阿拉伯数字 1）</span>，或识别下方小程序码，免下载即可使用。用同一手机号登录，和 App 是同一个账号。</p>
-      <figure class="qr-box">
-        <img class="qr" src="/img/miniprogram-qr.jpg" width="168" height="168" alt="「1杆高尔夫」小程序码">
-        <figcaption class="qr-cap" id="qr-cap">用微信扫码或长按识别</figcaption>
+      <p id="mp-text">免下载，直接在<b>「1杆高尔夫」</b>微信小程序里加入这个球局。用同一手机号登录，和 App 是同一个账号。</p>
+      <div class="btns" id="mp-btns">
+        <button type="button" class="btn btn-primary" id="open-mp">打开微信小程序</button>
+      </div>
+      <figure class="qr-box" id="qr-box" hidden>
+        <img class="qr" id="qr-img" src="/img/miniprogram-qr.jpg" width="168" height="168" alt="进入这个球局的小程序码">
+        <figcaption class="qr-cap" id="qr-cap">长按图片，识别小程序码</figcaption>
       </figure>
-      <p class="next" id="mp-next">小程序暂时打不开这条链接：进入小程序并登录后，请发起人加你为球友、在球局里邀请你，入局邀请会出现在小程序首页。</p>
+      <p class="note" id="mp-note" hidden></p>
     </section>
   </div>
 </main>
@@ -144,7 +147,57 @@
     text('lead', '链接不完整，可以请发起人重新分享。');
     return;
   }
-  document.getElementById('open-app').href = 'https://api.hiogolf.cn/g/' + gid + '/' + code;
+  var env = detectEnv();
+  var storeUrl = document.getElementById('store-link').href;
+  var apiBase = '/public-api/v1/public/group-rounds/' + gid;
+  var q = '?code=' + encodeURIComponent(code);
+
+  // 「在 App 中打开」:自定义 scheme 拉起;1.5 s 内页面没被切到后台 = 没装,落 App Store。
+  // 微信内置浏览器两样都拦,只能提示用浏览器打开(wx-only 文案)。
+  document.getElementById('open-app').addEventListener('click', function () {
+    if (env.wechat) { return; }
+    var left = false;
+    var onHide = function () { left = true; };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', onHide);
+    window.location.href = 'hiogolf://g/' + gid + '/' + code;
+    setTimeout(function () {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', onHide);
+      if (!left && !document.hidden) { window.location.href = storeUrl; }
+    }, 1500);
+  });
+
+  // 「打开微信小程序」:后端生成的 URL Scheme 直接拉起小程序入局页;
+  // 微信内置浏览器不认 scheme,换成这个局专属的小程序码长按识别。
+  if (env.wechat) {
+    document.getElementById('mp-btns').hidden = true;
+    document.getElementById('qr-img').src = apiBase + '/wxacode' + q;
+    document.getElementById('qr-box').hidden = false;
+    note('mp-note', '长按上面的小程序码，识别后直接进入这个球局。');
+  } else {
+    document.getElementById('open-mp').addEventListener('click', function () {
+      var btn = this;
+      btn.disabled = true; btn.textContent = '正在打开…';
+      fetch(apiBase + '/mp-scheme' + q)
+        .then(function (r) { return r.json(); })
+        .then(function (body) {
+          if (!body || body.code !== 0 || !body.data || !body.data.openlink) { throw new Error('no link'); }
+          window.location.href = body.data.openlink;
+        })
+        .catch(function () {
+          note('mp-note', '暂时没能拉起小程序：请打开微信，搜索「1杆高尔夫」小程序，登录后请发起人在球局里邀请你。');
+        })
+        .then(function () { btn.disabled = false; btn.textContent = '打开微信小程序'; });
+    });
+    if (!env.mobile) {
+      // 电脑上没有微信小程序可拉:直接给小程序码
+      document.getElementById('mp-btns').hidden = true;
+      document.getElementById('qr-img').src = apiBase + '/wxacode' + q;
+      document.getElementById('qr-box').hidden = false;
+      document.getElementById('qr-cap').textContent = '用手机微信「扫一扫」扫码，直接进入这个球局';
+    }
+  }
 
   // 公开预览:code 须与分享码匹配;不匹配 / 不存在都是 40400
   fetch('/public-api/v1/public/group-rounds/' + gid + '/preview?code=' + encodeURIComponent(code))
@@ -174,8 +227,7 @@
       }
       if (lead) { text('lead', lead); }
       if (!open) {
-        text('ios-text', '已安装 App：点「打开 App」查看。');
-        document.getElementById('mp-next').hidden = true;
+        text('ios-text', '已安装 App：点「在 App 中打开」查看。');
       }
       row('r-course', d.courseName);
       row('r-host', host);
@@ -189,43 +241,29 @@
       text('lead', '暂时读不到球局信息，链接可能已失效，可以请发起人重新分享。');
     });
 
-  // ---- 通用:按环境排两条路、小程序码说明 ----
-  function setupPaths() {
+  // ---- 通用:按环境排两条路 ----
+  function detectEnv() {
     var ua = navigator.userAgent || '';
     var wechat = /MicroMessenger/i.test(ua);
     var android = /Android/i.test(ua);
     var ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-    var mobile = ios || android || /Mobile/i.test(ua);
+    return { wechat: wechat, android: android, ios: ios, mobile: ios || android || /Mobile/i.test(ua) };
+  }
+  function setupPaths() {
+    var e = detectEnv();
     var iosCard = document.getElementById('path-ios');
     var mpCard = document.getElementById('path-mp');
-    if (wechat) { document.documentElement.className += ' in-wechat'; }
-    if (wechat || android) {
-      // 微信内 / 安卓:小程序优先(微信里长按即可识别小程序码)
+    if (e.wechat) { document.documentElement.className += ' in-wechat'; }
+    if (e.wechat || e.android) {
+      // 微信内 / 安卓:小程序优先
       iosCard.parentNode.insertBefore(mpCard, iosCard);
       mpCard.className += ' is-rec';
-    } else if (ios) {
+    } else if (e.ios) {
       iosCard.className += ' is-rec';
     }
-    document.getElementById('qr-cap').textContent = wechat ? '长按图片，识别小程序码'
-        : mobile ? '截图后打开微信「扫一扫」，从相册选取识别'
-        : '用手机微信「扫一扫」扫码打开';
   }
+  function note(elId, s) { var el = document.getElementById(elId); el.textContent = s; el.hidden = false; }
 
-  // parts: 文本片段数组;boldIndex 指定哪一段加粗(邀请码)
-  function setNext(parts, boldIndex) {
-    var el = document.getElementById('mp-next');
-    el.textContent = '';
-    parts.forEach(function (p, i) {
-      if (i === boldIndex) {
-        var b = document.createElement('b');
-        b.textContent = p;
-        el.appendChild(b);
-      } else {
-        el.appendChild(document.createTextNode(p));
-      }
-    });
-    el.hidden = false;
-  }
   function text(elId, s) { document.getElementById(elId).textContent = s; }
   function row(rowId, value) {
     var r = document.getElementById(rowId);
