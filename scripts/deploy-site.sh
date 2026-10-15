@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 官网 + 球场端 Tee Time 静态站部署脚本:在 CVM 上执行(与后端 deploy-server.sh 同一台机器)。
+# 官网静态站部署脚本:在 CVM 上执行(与后端 deploy-server.sh 同一台机器)。
 #   首次:  git clone https://github.com/HIOGolfApp/HIOWebAPP.git /opt/hio-website
 #   之后:  bash /opt/hio-website/scripts/deploy-site.sh
 # 做三件事:git pull main;nginx 站点配置有变化时拷贝并 reload;打印线上地址。幂等,可重复执行。
@@ -51,4 +51,4 @@ if ! cmp -s "$NGINX_SRC" "$NGINX_DST"; then
   fi
 fi
 
-[ "$before" != "$after" ] && echo "online: https://www.hiogolf.cn/  ·  https://www.hiogolf.cn/tee/" || true
+[ "$before" != "$after" ] && echo "online: https://www.hiogolf.cn/" || true

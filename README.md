@@ -27,10 +27,8 @@
 | `meetup.html` / `invite.html` / `event.html` / `round.html` / `caddie.html` | 分享链接落地页（noindex，见「分享落地页与路由」） |
 | `img/miniprogram-qr.jpg` | 小程序「1杆高尔夫」正式版小程序码（落地页引用） |
 | `.well-known/apple-app-site-association` | iOS Universal Links 声明，与 `api.hiogolf.cn` 上的同名文件内容一致 |
-| `robots.txt` / `sitemap.xml` | 搜索引擎：sitemap 只收录首页与协议页；落地页、`/tee/` 等不收录 |
-| `tee/` | 球场端 Tee Time 演示（见下节；未上线，不对外宣传，robots 已屏蔽） |
-| `docs/tee-time.md` | Tee Time 模块产品/算法/后端接口合同 |
-| `nginx/hiogolf-site.conf` | nginx 站点配置：静态服务、落地页路由、仓库文件封禁、裸域 301、数据接口同源反代（`/public-api/`、`/tee-api/`） |
+| `robots.txt` / `sitemap.xml` | 搜索引擎：sitemap 只收录首页与协议页；落地页等不收录 |
+| `nginx/hiogolf-site.conf` | nginx 站点配置：静态服务、落地页路由、仓库文件封禁、裸域 301、数据接口同源反代（`/public-api/`） |
 
 ### 实时数据
 
@@ -55,26 +53,8 @@ App 与小程序生成的分享链接是 `https://api.hiogolf.cn/{m,i,e,g,c}/...
 
 - `hiogolf.cn`（裸域）：只直接提供 `/.well-known/`（Apple 抓 AASA 不跟随重定向），其余 301 到 `https://www.hiogolf.cn$request_uri`；
 - `/.well-known/apple-app-site-association` 以 `application/json` 返回；
-- 两个 server 块都对 `/.git` 等点文件、`/scripts/`、`/nginx/`、`/docs/`、`/tee/test/`、`/README.md`、`/.gitignore` 返回 404；
+- 两个 server 块都对 `/.git` 等点文件、`/scripts/`、`/nginx/`、`/docs/`、`/README.md`、`/.gitignore` 返回 404；
 - 服务器是 nginx 1.14：保持 1.14 语法（`listen 443 ssl http2`，不要用 `http2 on`）。
-
-## 球场端 Tee Time 管理（`tee/`）
-
-> 内部演示，后端尚未实现，不在官网对外宣传；首页没有入口，robots 已屏蔽。
-
-面向球场运营方的开球时间（tee time）管理与打球节奏（pace of play）监控，同一仓库内的纯静态子应用，**零构建、零 CDN**，
-后端未上线时自动进入「演示模式」（本地模拟一整天球场运转），可直接打开体验：
-
-- `tee/index.html` **球场端控制台**：发球表与开球派发（默认 8 分钟间隔，有可靠历史数据的快组 6–7 分钟、置信慢组最多放宽到 10 分钟，派发前校验「不影响后面任何一组」）、
-  实时场况与巡查建议（黄点 = 已超时，红点 = 超时 10 分钟以上；会员黑、普通白）、旺季并组建议、球场参数与标准时间校准（3 杆 7 / 4 杆 11 / 5 杆 15 分钟 + 转场时间，可现场调整）。
-- `tee/live.html` **客户端原型（球员 / 球童）**：各洞当前球组位置（不显示姓名，好友除外）、本洞剩余时间、红色预警下的「让后组先过」建议、球童与客人互评（仅本人可见）。正式客户端规划在一杆高尔夫 App / 小程序内实现（球童即带球童角色的 HIO 账号，无需单独版本），原型用于演示与验收接口合同。
-- 引擎 `tee/js/*.js`：纯函数、可在 Node 中单测（`node tee/test/run.js`），既驱动演示模式，也作为后端 Java 移植的参考实现与黄金用例。
-- 后端：规划为 `HIO-backend` 的一个新模块（`/api/v1/tee/**`），网站侧经 nginx 同源反代 `/tee-api/v1/`。详见 [`docs/tee-time.md`](docs/tee-time.md)。
-
-```bash
-node tee/test/run.js              # 单元测试 + 引擎纯净性 lint(零依赖)
-node tee/test/smoke/smoke.js      # 浏览器冒烟测试(需本机有 playwright 包)
-```
 
 ## 部署（服务器）
 

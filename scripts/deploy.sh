@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 官网 + 球场端静态站:从运维机(有部署密钥的那台电脑)一条命令发布到 CVM。
+# 官网静态站:从运维机(有部署密钥的那台电脑)一条命令发布到 CVM。
 # 与后端仓库 HIO-backend/scripts/deploy.sh 用同一台服务器、同一把密钥、同样的环境变量名:
 #   DEPLOY_SERVER   默认 root@114.132.175.46
 #   DEPLOY_SSH_KEY  默认 ~/.ssh/aigolf_deploy
@@ -31,4 +31,4 @@ if [ "${1:-}" = "--cron" ]; then
     "( crontab -l 2>/dev/null | grep -v deploy-site.sh; echo '*/2 * * * * bash $REMOTE_DIR/scripts/deploy-site.sh >> /var/log/hio-site-deploy.log 2>&1' ) | crontab -" < /dev/null
   echo "cron installed: main 一合并即自动上线"
 fi
-echo "done: https://www.hiogolf.cn/  ·  https://www.hiogolf.cn/tee/"
+echo "done: https://www.hiogolf.cn/"
