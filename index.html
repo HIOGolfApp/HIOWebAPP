@@ -112,29 +112,13 @@
   .brand svg { display: block; }
   .nav-links { display: flex; align-items: center; gap: clamp(18px, 3vw, 32px); font-size: 15px; color: var(--sub); }
   .nav-links a:hover { color: var(--ink); }
-  /* 办理 ICP 许可期间的临时栏目导航(与 /assets/site.css 栏目页同款) */
-  .nav-inner { gap: 24px; }
-  .nav-cols { display: flex; align-items: center; gap: clamp(14px, 2.2vw, 26px); font-size: 15px; color: var(--sub); flex: 1; min-width: 0; }
-  .nav-cols a { white-space: nowrap; padding: 4px 0; border-bottom: 2px solid transparent; }
-  .nav-cols a:hover { color: var(--ink); }
-  .nav-cols a.on { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
-  .nav-pub { font-size: 14px; font-weight: 600; color: var(--ink) !important; background: var(--fill); padding: 8px 16px; border-radius: var(--r-btn); white-space: nowrap; }
-  .nav-pub:hover { background: var(--line); }
-  @media (max-width: 860px) {
-    .nav-inner { flex-wrap: wrap; gap: 8px 16px; padding-bottom: 0; }
-    .nav-inner .brand { flex: 1; }
-    .nav-cols { order: 3; flex: 1 0 100%; overflow-x: auto; scrollbar-width: none; padding-bottom: 8px; gap: 20px; }
-    .nav-cols::-webkit-scrollbar { display: none; }
-    /* 导航变两行后吸顶栏约 100px,锚点留位跟着加大 */
-    section, .dl-card { scroll-margin-top: 112px; }
-  }
   .nav-cta {
     font-size: 14px; font-weight: 600; color: #fff !important;
     background: var(--ink); padding: 8px 16px; border-radius: var(--r-btn);
     transition: opacity .15s;
   }
   .nav-cta:hover { opacity: .82; }
-  @media (max-width: 640px) { .nav-links a:not(.nav-cta):not(.nav-pub) { display: none; } }
+  @media (max-width: 640px) { .nav-links a:not(.nav-cta) { display: none; } }
 
   /* ---------- hero ---------- */
   .hero { text-align: center; padding: clamp(64px, 10vw, 120px) clamp(20px, 4vw, 32px) clamp(40px, 6vw, 64px); }
@@ -342,16 +326,10 @@
       </svg>
       一杆高尔夫
     </a>
-    <div class="nav-cols">
-      <a href="/" class="on" aria-current="page">首页</a>
-      <a href="/courses.html">球场</a>
-      <a href="/feed.html">动态</a>
-      <a href="/events.html">赛事活动</a>
-      <a href="/about.html">关于我们</a>
-      <a href="/review.html">信息发布审核机制</a>
-    </div>
     <div class="nav-links">
-      <a class="nav-pub" href="/publish.html">发布信息</a>
+      <a href="#features">功能</a>
+      <a href="#coverage">球场覆盖</a>
+      <a href="#contact">联系我们</a>
       <a class="nav-cta" href="#download">下载</a>
     </div>
   </div>
@@ -536,8 +514,7 @@
 <footer>
   <div>© 2026 佛山小白球科技有限责任公司 · <span class="nowrap">一杆高尔夫 HIO Golf</span> · <a href="mailto:contact@hiogolf.cn">contact@hiogolf.cn</a></div>
   <div>小红书官方账号：<a href="https://www.xiaohongshu.com/user/profile/5e3cc8f500000000010024a2" target="_blank" rel="noopener">一杆高尔夫</a></div>
-  <div><a href="/about.html">关于我们</a> · <a href="/terms.html">用户协议</a> · <a href="/privacy.html">隐私政策</a> · <a href="/privacy-en.html">Privacy Policy (EN)</a> · <a href="/review.html">信息发布审核机制</a></div>
-  <div>违法和不良信息举报：<a href="mailto:contact@hiogolf.cn">contact@hiogolf.cn</a> · <a href="https://www.12377.cn" target="_blank" rel="noopener">中央网信办违法和不良信息举报中心 12377</a></div>
+  <div><a href="/terms.html">用户协议</a> · <a href="/privacy.html">隐私政策</a> · <a href="/privacy-en.html">Privacy Policy (EN)</a></div>
   <div><a href="https://beian.miit.gov.cn" target="_blank" rel="noopener">粤ICP备2026097752号-1</a></div>
 </footer>
 
