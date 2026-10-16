@@ -29,6 +29,8 @@
 | `.well-known/apple-app-site-association` | iOS Universal Links 声明，与 `api.hiogolf.cn` 上的同名文件内容一致 |
 | `robots.txt` / `sitemap.xml` | 搜索引擎：sitemap 只收录首页与协议页；落地页等不收录 |
 | `nginx/hiogolf-site.conf` | nginx 站点配置：静态服务、落地页路由、仓库文件封禁、裸域 301、数据接口同源反代（`/public-api/`） |
+| `scripts/deploy-site.sh` / `scripts/deploy.sh` | 服务器端自动上线（cron）/ 运维机手动触发一轮，见「部署」 |
+| `.github/workflows/ci.yml`、`.github/ci/` | CI：nginx 1.14 校验与路由冒烟、deploy-site.sh 场景测试、链接检查；通过后移动 `deploy/main` |
 
 ### 实时数据
 
@@ -56,24 +58,46 @@ App 与小程序生成的分享链接是 `https://api.hiogolf.cn/{m,i,e,g,c}/...
 - 两个 server 块都对 `/.git` 等点文件、`/scripts/`、`/nginx/`、`/docs/`、`/README.md`、`/.gitignore` 返回 404；
 - 服务器是 nginx 1.14：保持 1.14 语法（`listen 443 ssl http2`，不要用 `http2 on`）。
 
-## 部署（服务器）
+## 部署（服务器）：合并即上线
 
-站点目录 `/opt/hio-website` 是本仓库的 checkout。**不要在服务器上直接 `git pull`**：服务器的 origin 是 HTTPS，从这台机器到 GitHub 的 HTTPS 时通时断，挂住时没有任何输出；走 SSH 协议一直可靠。
+站点目录 `/opt/hio-website` 是本仓库的 checkout，nginx 的 root 直接指向它。和后端同一套拉取式部署：
 
-日常更新（静态文件拉下来即生效）：
+1. PR 合并到 `main` → GitHub Actions 跑 CI（`.github/workflows/ci.yml`）：Rocky Linux 8 容器（与线上同版本的 nginx 1.14.1 / git 2.43）里 `nginx -t` 加载站点配置并用 curl 验路由、封禁与限流页面，跑 `scripts/deploy-site.sh` 的场景测试；另查页面链接 / 资源 / 锚点、AASA、sitemap、落地页 noindex，以及 shellcheck；
+2. 全部通过 → `mark-deployable` 把分支 `deploy/main` 移到这个提交（只往前移，不 force）；
+3. 服务器上 cron 每 2 分钟（偶数分钟的第 30 秒，和后端 `*/2`、CRM 奇数分钟错开）跑 `scripts/deploy-site.sh`：走 SSH 协议、带 timeout 拉 `deploy/main`，把 checkout 快进过去，静态文件即时生效；`nginx/hiogolf-site.conf` 有变化才拷贝 → `nginx -t` → reload，不通过就恢复线上原文件。
+
+合并后约 2–4 分钟上线；没通过 CI 的提交不会上线。GitHub 里不存服务器密钥，也不用从 GitHub 往国内服务器推。
+
+日常（服务器上，root）：
 
 ```bash
-cd /opt/hio-website \
-  && timeout 60 git fetch git@github.com:HIOGolfApp/HIOWebAPP.git main \
-  && git merge --ff-only FETCH_HEAD \
-  && git log --oneline -1          # 确认 HEAD 真的到了新提交(fetch 失败时 merge 会显示 Already up to date)
+bash /opt/hio-website/scripts/deploy-site.sh --status          # 线上提交、deploy/main、暂停、nginx 配置、最近日志
+tail -50 /var/log/hio-site-deploy.log                          # 每次上线 / 跳过的原因都在这里
+bash /opt/hio-website/scripts/deploy-site.sh --pause "原因"    # 暂停；--resume 恢复，下一轮追上 deploy/main
 ```
 
-`nginx/hiogolf-site.conf` 有变化时，再复制配置、校验并 reload：
+- **在 GitHub 上暂停**：仓库 Settings → Secrets and variables → Actions → Variables 加 `AUTO_DEPLOY=false`（CI 照跑，只是不再移 `deploy/main`）。恢复后想立刻上线：Actions 里对 main 手动 Run workflow，或合并下一个 PR。
+- **不想等 cron**：运维机上 `bash scripts/deploy.sh`（立刻跑一轮并打印 `--status`；它也只上线 `deploy/main`）。
+- **回滚**：在 GitHub 上 revert 那个 PR 并合并（照样过 CI，2–4 分钟）。等不及时在服务器上 `git -C /opt/hio-website checkout -q --detach <好的提交>`：自动上线看到不在 main 上就停手（通知一次），修复上线前 `git -C /opt/hio-website checkout main` 即恢复。detached 不会自动回退 nginx 配置；坏的是 nginx 配置时要手动拷回并 `nginx -t && systemctl reload nginx`。
+- **nginx 配置过不了 `nginx -t`**：自动恢复线上原文件并通知，静态文件照常上线；这份配置不再每轮重试，修好合并即可（或 `deploy-site.sh --retry`）。换配置那一下拿着后端的发布锁 `/var/lock/aigolf-deploy.lock`，不会和后端蓝绿切换的 `nginx -t` 撞车。
+- **配置引用了新的 `hio_*` 限流 zone**：zone 定义在后端仓库 `nginx/aigolf-ratelimit.conf`，由后端 `scripts/install-nginx-limits.sh` 装。服务器上还没装时自动跳过 nginx、只上静态文件，装好后下一轮自动补上。
+- **会停下来等人的情况**（日志里说一次，并通知）：服务器 checkout 有未提交改动、不在 main 上、有不在 GitHub 上的提交（不能快进）。服务器 main 比 `deploy/main` 新（有人手动拉了还没过 CI 的提交）时只是这轮不动，等 `deploy/main` 追上来。
+- **通知**：fetch 连续失败约 30 分钟、锁被占约 30 分钟、nginx 配置更新失败、以及上面这些停下来的情况，经后端的 `/opt/ai-golf/scripts/lib-notify.sh` 发（`/opt/ai-golf/.env` 里配邮件或企业微信；没配就只写日志）。成功上线只写日志。
+- 状态文件在 `/var/lib/hio-site-deploy/`（不在站点根目录里）。`deploy-site.sh` 本身就在这份 checkout 里，改了它不用另外拷，快进后下一轮就是新版。
+
+### 一次性设置（接上自动上线时做一次）
+
+服务器上原来的 `deploy-site.sh` 是旧版（走 HTTPS 的 origin、没有 timeout，会挂起），所以第一次要手动用 SSH 协议拉到新版：
 
 ```bash
-cp /opt/hio-website/nginx/hiogolf-site.conf /etc/nginx/conf.d/hiogolf-site.conf
-nginx -t && systemctl reload nginx
+# 0. 本仓库接上 CI 的 PR 合并后，等 Actions 里 mark-deployable 变绿（deploy/main 出现）
+# 1. 用 SSH 协议把 checkout 快进到 deploy/main，确认 HEAD 真的到了合并提交
+cd /opt/hio-website && timeout 60 git fetch git@github.com:HIOGolfApp/HIOWebAPP.git deploy/main && git merge --ff-only FETCH_HEAD && git log --oneline -1
+# 2. origin 也改成 SSH：脚本不依赖 origin，但以后有人手动 git fetch / pull 就不会挂起
+git -C /opt/hio-website remote set-url origin git@github.com:HIOGolfApp/HIOWebAPP.git
+# 3. 手动跑一轮（应该什么都不输出：已是 deploy/main、nginx 配置未变），看状态，再装 cron
+bash /opt/hio-website/scripts/deploy-site.sh && bash /opt/hio-website/scripts/deploy-site.sh --status
+bash /opt/hio-website/scripts/deploy-site.sh --install
 ```
 
 上线后用 curl 复验，例如：
@@ -86,15 +110,32 @@ curl -sI https://www.hiogolf.cn/.git/HEAD                               # 404
 curl -sI https://www.hiogolf.cn/e/1                                     # 200(event.html)
 ```
 
-首次部署：
+### 手动兜底（GitHub Actions 不可用时）
+
+**不要在服务器上直接 `git pull`**：从这台机器到 GitHub 的 HTTPS 时通时断，挂住时没有任何输出；走 SSH 协议一直可靠。手动拉 `main`（跳过 CI）：
+
+```bash
+cd /opt/hio-website \
+  && timeout 60 git fetch git@github.com:HIOGolfApp/HIOWebAPP.git main \
+  && git merge --ff-only FETCH_HEAD \
+  && git log --oneline -1          # 确认 HEAD 真的到了新提交(fetch 失败时 merge 会显示 Already up to date)
+```
+
+这之后服务器比 `deploy/main` 新，自动上线这几轮不动，CI 把 `deploy/main` 标到它（或更新的提交）后自动恢复。`nginx/hiogolf-site.conf` 有变化时手动拷贝并校验：
+
+```bash
+cp /opt/hio-website/nginx/hiogolf-site.conf /etc/nginx/conf.d/hiogolf-site.conf
+nginx -t && systemctl reload nginx
+```
+
+全新服务器首次部署：
 
 ```bash
 git clone git@github.com:HIOGolfApp/HIOWebAPP.git /opt/hio-website
 cp /opt/hio-website/nginx/hiogolf-site.conf /etc/nginx/conf.d/hiogolf-site.conf
 nginx -t && systemctl reload nginx
+bash /opt/hio-website/scripts/deploy-site.sh --install
 ```
-
-`scripts/deploy.sh`（运维机一键发布）与 `scripts/deploy-site.sh`（服务器端 fetch + ff-only + 配置有变化时 cp / `nginx -t` / reload，失败回滚）也能用，但 `deploy-site.sh` 里的 `git fetch origin main` 走的是服务器上的 HTTPS origin，会撞上面的挂起问题；把服务器 origin 改成 SSH 地址之前，优先用上面的手动命令，也不要挂 cron。
 
 ## 相关
 

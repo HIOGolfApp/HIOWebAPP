@@ -1,0 +1,96 @@
+# HIO 官网 CI:PR 和 main 上都跑。官网是纯静态、零构建,所以检查的是:
+#   server-sim  rockylinux:8 容器 = 线上 TencentOS 3 同版本的 nginx 1.14.1 / git 2.43(.github/ci/sim-setup.sh):
+#               nginx -t 加载 nginx/hiogolf-site.conf(后端的 hio_* 限流 zone、upstream、证书用桩),再起 nginx
+#               用 curl 验落地页路由、AASA、裸域 301、仓库文件 404、/public-api 反代、429 页面(nginx-test.sh);
+#               用本地裸仓库模拟 GitHub,跑 scripts/deploy-site.sh 的各种情况(deploy-site-test.sh)
+#   site        页面链接 / 资源 / 锚点、AASA 与 sitemap、landing 页 noindex(site-check.py)、shellcheck
+# 本地复现见 .github/ci/sim-setup.sh 开头的四行 docker 命令。
+#
+# 合并即上线(照搬 HIO-backend 的 deploy/main 拉取式部署):main 上检查全部通过后,mark-deployable 把分支
+# deploy/main 移到这个提交;服务器上 cron 每 2 分钟跑 scripts/deploy-site.sh,用 SSH 拉 deploy/main,快进
+# /opt/hio-website(站点根目录就是这份 checkout,静态文件即时生效),nginx 配置变了才 nginx -t + reload。
+# GitHub 里不存服务器登录密钥,也不用从 GitHub 往国内服务器推。详见 README「部署」。
+# 暂停:仓库变量 AUTO_DEPLOY=false(这里就不移 deploy/main),或在服务器上 deploy-site.sh --pause。
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 每个分支 / PR 同时只跑一次。PR 上新推送取消旧的;main 上不取消,按顺序跑,deploy/main 只会往前走
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  server-sim:
+    name: nginx 1.14 + deploy-site.sh (Rocky 8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Start a Rocky Linux 8 "server" (nginx 1.14.1, git 2.43)
+        run: |
+          docker run -d --name sim -v "$PWD:/src:ro" rockylinux:8 sleep infinity
+          docker exec sim bash /src/.github/ci/sim-setup.sh
+
+      - name: nginx -t + routes (.github/ci/nginx-test.sh)
+        run: docker exec sim bash /src/.github/ci/nginx-test.sh
+
+      - name: deploy-site.sh scenarios (.github/ci/deploy-site-test.sh)
+        run: docker exec sim bash /src/.github/ci/deploy-site-test.sh
+
+  site:
+    name: links / assets / scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Links, assets, AASA, sitemap (.github/ci/site-check.py)
+        run: python3 .github/ci/site-check.py
+
+      - name: shellcheck
+        run: shellcheck -S warning scripts/*.sh .github/ci/*.sh
+
+  # ---- 合并即上线:main 上检查全部通过后,把 deploy/main 移到这个提交。
+  # 服务器上的 scripts/deploy-site.sh(cron 每 2 分钟)看到它变新就快进上线。只往前移(普通推送,不 --force),
+  # 重跑一次旧的 CI 不会把线上换回旧版本。恢复后想立刻上线:Actions 里对 main 手动 Run workflow,或合并下一个 PR。
+  mark-deployable:
+    name: mark deployable (deploy/main)
+    needs: [server-sim, site]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && vars.AUTO_DEPLOY != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write   # 只有这个 job 能写 refs;检查 job 仍是只读
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # 要判断 deploy/main 是不是这个提交的祖先
+      - name: Move deploy/main to this commit
+        run: |
+          if git fetch -q origin deploy/main; then
+            CUR=$(git rev-parse FETCH_HEAD)
+            if git merge-base --is-ancestor "$GITHUB_SHA" "$CUR"; then
+              echo "deploy/main is already at ${CUR::7} (this commit or a newer one; re-run of an older run?) - left as is" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if ! git merge-base --is-ancestor "$CUR" "$GITHUB_SHA"; then
+              # main 被改写过,或有人手动推了 deploy/main:不处理的话以后每次都会"left as is",自动上线悄悄停住
+              echo "::error::deploy/main (${CUR::7}) and main (${GITHUB_SHA::7}) have diverged, so auto-deploy is stuck. Check what is serving (deploy-site.sh --status on the server), then reset it: git push -f origin ${GITHUB_SHA::7}:refs/heads/deploy/main"
+              exit 1
+            fi
+          elif git ls-remote --exit-code origin refs/heads/deploy/main > /dev/null; then
+            echo "::error::deploy/main exists but could not be fetched - re-run this job"
+            exit 1
+          fi
+          git push origin "$GITHUB_SHA:refs/heads/deploy/main"
+          echo "deploy/main -> ${GITHUB_SHA::7}: the server deploys it within ~2 min (scripts/deploy-site.sh)" | tee -a "$GITHUB_STEP_SUMMARY"
