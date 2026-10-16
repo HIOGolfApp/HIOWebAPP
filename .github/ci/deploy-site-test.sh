@@ -38,7 +38,7 @@ served()   { curl -sk --resolve "$W:443:127.0.0.1" "https://$W/" | grep -qF -- "
 eq()       { [ "$1" = "$2" ]; }
 # DEV 上改点东西、提交、推 main(CI 还没跑:deploy/main 不动)
 commit()   { local msg=$1; shift; ( cd "$DEV" && "$@" ) && git -C "$DEV" commit -qam "$msg" && git -C "$DEV" tag "$msg" && git -C "$DEV" push -q "$GH" main; }
-mark()     { git -C "$DEV" push -q "$GH" "${1:-HEAD}:refs/heads/deploy/main"; }   # = CI 的 mark-deployable
+mark()     { git -C "$DEV" push -q "$GH" HEAD:refs/heads/deploy/main; }   # = CI 的 mark-deployable
 page()     { echo "<!-- ci $1 -->" >> index.html; }
 hdr()      { sed -i "s/^\(    add_header X-CI-Rev\).*/\1 $1;/" "$CONF_REL"; }   # www 块里的测试响应头,验证真 reload 了
 title()    { echo; echo "== $*"; }
@@ -50,7 +50,8 @@ rm -rf "$SITE" "$GH" "$DEV" "$STATE" /tmp/ci-notices /tmp/ci-reloads /etc/nginx/
 cp /opt/ci/aigolf-ratelimit.conf /etc/nginx/conf.d/aigolf-ratelimit.conf
 crontab -r 2> /dev/null || true
 mkdir -p "$DEV"
-tar -C "$SRC" --exclude=./.git --exclude=./.claude -cf - . | tar -C "$DEV" -xf -
+# --no-same-owner:CI 里检出目录属 runner 的 uid,root 解包默认保留属主,git 会报 dubious ownership;服务器上也是 root 的
+tar -C "$SRC" --exclude=./.git --exclude=./.claude -cf - . | tar -C "$DEV" --no-same-owner -xf -
 sed -i "s/^\(    server_name www\.hiogolf\.cn;\)$/\1\n    add_header X-CI-Rev c1;/" "$DEV/$CONF_REL"
 grep -q 'X-CI-Rev c1' "$DEV/$CONF_REL" || { echo "could not add the test header to $CONF_REL"; exit 1; }
 git -C "$DEV" init -q -b main && git -C "$DEV" add -A && git -C "$DEV" commit -qm c1 && git -C "$DEV" tag c1

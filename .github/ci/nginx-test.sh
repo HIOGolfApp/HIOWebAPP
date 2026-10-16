@@ -13,7 +13,8 @@ nginx -s stop 2> /dev/null && sleep 1 || true
 rm -rf "$SITE" /etc/nginx/private.d
 mkdir -p "$SITE"
 # 服务器上站点根目录就是 checkout:拷工作区(不含 .git),再 init 一个 .git,好验证 /.git/ 404
-tar -C "$SRC" --exclude=./.git --exclude=./.claude -cf - . | tar -C "$SITE" -xf -
+# --no-same-owner:CI 里检出目录属 runner 的 uid,解成 root 的,和服务器一样
+tar -C "$SRC" --exclude=./.git --exclude=./.claude -cf - . | tar -C "$SITE" --no-same-owner -xf -
 git init -q "$SITE"
 cp "$SITE/nginx/hiogolf-site.conf" "$CONF"
 
