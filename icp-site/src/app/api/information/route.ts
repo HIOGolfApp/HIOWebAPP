@@ -1,0 +1,30 @@
+import { getSiteUser } from '../../../lib/site-user';
+import {entitlement} from '../../../lib/membership';
+import { getDb } from '../../../db';
+import { submissions,audit } from '../../../db/schema';
+import { and,eq,desc } from 'drizzle-orm';
+import { env } from 'cloudflare:workers';
+import {informationCategories} from '../../../lib/information-categories';
+import { publicInformation } from '../../../lib/public-information';
+export const dynamic='force-dynamic';
+const json=(x:unknown,s=200)=>Response.json(x,{status:s,headers:{'Cache-Control':'private, no-store'}});
+const publicRow=(x:any)=>({id:x.id,title:x.title,category:x.category,provider:x.provider,contactName:x.contactName,phone:x.phone,summary:x.summary,body:x.body,source:x.source,origin:'用户发布 · 平台审核',created:x.created,status:'published',reason:'联系资料由发布者提供并经平台内容审核；未表示已完成企业入驻或实名核验。'});
+export async function GET(req:Request){try{const u=await getSiteUser(),db=getDb(),action=new URL(req.url).searchParams.get('action');const admin=!!u&&!u.local&&!!env.ADMIN_EMAIL&&u.email.toLowerCase()===String(env.ADMIN_EMAIL).toLowerCase();
+if(action==='mine'){if(!u)return json({error:'请先登录'},401);return json({rows:await db.select().from(submissions).where(eq(submissions.userId,u.userId)).orderBy(desc(submissions.updated)),quota:await entitlement(u.userId)});}
+if(action==='admin'){if(!admin)return json({error:'无管理权限'},403);return json({rows:await db.select().from(submissions).orderBy(desc(submissions.updated))});}
+const rows=[...publicInformation,...(await db.select().from(submissions).where(eq(submissions.status,'published')).orderBy(desc(submissions.updated))).filter(x=>x.contactName.trim().length>=2&&!!x.contactVerifiedAt).map(publicRow)];
+if(action==='detail'){const x=rows.find(x=>x.id===new URL(req.url).searchParams.get('id'));return x?json(x):json({error:'信息不存在、待审核或已下架'},404);}
+return json({rows:rows.map(({body,...r})=>r),user:!!u,admin,quota:u?await entitlement(u.userId):null});}catch(e){console.error(e);return json({error:'信息服务暂时不可用，请稍后重试'},503);}}
+export async function POST(req:Request){try{if(req.headers.get('origin')!==new URL(req.url).origin)return json({error:'请求来源无效'},403);const u=await getSiteUser();if(!u)return json({error:'请先登录'},401);const b:any=await req.json(),db=getDb(),now=new Date().toISOString();
+const admin=!u.local&&!!env.ADMIN_EMAIL&&u.email.toLowerCase()===String(env.ADMIN_EMAIL).toLowerCase();
+if(b.action==='review'){if(!admin)return json({error:'无管理权限'},403);if(!['published','rejected'].includes(b.status)||typeof b.reason!=='string'||b.reason.trim().length<3||b.reason.length>1000||b.status==='published'&&b.checked!==true)return json({error:'请填写审核说明，发布前须确认服务商、真实联系人姓名和电话已核对。'},400);const x=(await db.select().from(submissions).where(eq(submissions.id,b.id)))[0];if(!x||x.status!=='pending')return json({error:'该信息不在待审核状态'},409);if(b.status==='published'&&(!x.contactName||x.contactName.trim().length<2))return json({error:'缺少可核实的真实业务联系人姓名，不能发布'},400);await db.batch([db.update(submissions).set({status:b.status,reason:b.reason.trim(),updated:now,contactVerifiedAt:b.status==='published'?now:null}).where(and(eq(submissions.id,b.id),eq(submissions.status,'pending'))),db.insert(audit).values({actor:u.email,action:'information:'+b.status,target:b.id,detail:b.reason.trim(),created:now})]);return json({message:'审核已保存，发布者可查看处理说明。'});}
+if(b.action==='withdraw'){const x=(await db.select().from(submissions).where(and(eq(submissions.id,b.id),eq(submissions.userId,u.userId))))[0];if(!x)return json({error:'信息不存在或无权操作'},404);await db.update(submissions).set({status:'withdrawn',updated:now}).where(eq(submissions.id,x.id));return json({message:'已下架，公开列表不再展示。'});}
+if(b.action==='submit'){const quota=await entitlement(u.userId);const fields=['title','category','provider','contactName','phone','summary','body','source'];if(fields.some(k=>typeof b[k]!=='string')||b.consent!==true)return json({error:'请完整填写信息并确认有权公开服务商联系方式'},400);if(['客服','企业客服','平台客服','管理员','联系人','待提供','待核实'].includes(b.contactName.trim()))return json({error:'请填写该服务商真实业务联系人姓名，不要填写通用客服称呼'},400);if(b.title.trim().length<4||b.title.length>100||b.provider.trim().length<2||b.provider.length>150||b.contactName.trim().length<2||b.contactName.length>40||![...informationCategories,'体育服务','数字技术','活动信息'].includes(b.category)||!/^\+?[0-9()\- ]{7,30}$/.test(b.phone)||b.summary.trim().length<10||b.summary.length>300||b.body.trim().length<30||b.body.length>10000||b.source.length>1000)return json({error:'请核对标题、服务商、电话、摘要和详情长度。'},400);try{let url=new URL(b.source);if(!['https:','http:'].includes(url.protocol))throw Error();}catch{return json({error:'请填写可核对的公开来源网址（http/https）'},400);}
+const id=b.id||crypto.randomUUID();if(b.id){const x=(await db.select().from(submissions).where(and(eq(submissions.id,b.id),eq(submissions.userId,u.userId))))[0];if(!x)return json({error:'无权修改此信息'},403);}
+const binding=env.DB;if(!binding)throw Error('DB unavailable');
+const values=[b.title.trim(),b.category,b.provider.trim(),b.contactName.trim(),b.phone.trim(),b.summary.trim(),b.body.trim(),b.source,now];let result;
+if(b.id){result=await binding.prepare("UPDATE submissions SET title=?,category=?,provider=?,contact_name=?,phone=?,summary=?,body=?,source=?,updated=?,status='pending',reason='',contact_verified_at=NULL WHERE id=? AND user_id=? AND ((status IN ('pending','published')) OR (SELECT COUNT(*) FROM submissions WHERE user_id=? AND status IN ('pending','published'))<?)").bind(...values,id,u.userId,u.userId,quota.limit).run();}
+else{result=await binding.prepare("INSERT INTO submissions (title,category,provider,contact_name,phone,summary,body,source,updated,status,reason,id,user_id,email,created) SELECT ?,?,?,?,?,?,?,?,?,'pending','',?,?,?,? WHERE (SELECT COUNT(*) FROM submissions WHERE user_id=? AND status IN ('pending','published'))<?").bind(...values,id,u.userId,u.email,now,u.userId,quota.limit).run();}
+if(!result.meta.changes)return json({error:'已达到'+quota.name+'的'+quota.limit+'条有效信息额度。退回或撤回可释放额度。'},403);
+return json({message:'信息已提交审核，审核通过前不会出现在公开列表。'});}
+return json({error:'不支持的操作'},400);}catch(e){console.error(e);return json({error:'保存失败，请稍后重试'},503);}}
