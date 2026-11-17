@@ -4,6 +4,7 @@
 #               用 curl 验落地页路由、AASA、裸域 301、仓库文件 404、/public-api 反代、429 页面(nginx-test.sh);
 #               用本地裸仓库模拟 GitHub,跑 scripts/deploy-site.sh 的各种情况(deploy-site-test.sh)
 #   site        页面链接 / 资源 / 锚点、AASA 与 sitemap、landing 页 noindex(site-check.py)、shellcheck
+#   icp-site    临时 ICP 站(icp-site/,办完回滚):类型检查、从源码重新构建必须和提交的 dist/ 一字不差、接口端到端测试
 # 本地复现见 .github/ci/sim-setup.sh 开头的四行 docker 命令。
 #
 # 合并即上线(照搬 HIO-backend 的 deploy/main 拉取式部署):main 上检查全部通过后,mark-deployable 把分支
@@ -58,14 +59,40 @@ jobs:
         run: python3 .github/ci/site-check.py
 
       - name: shellcheck
-        run: shellcheck -S warning scripts/*.sh .github/ci/*.sh
+        run: shellcheck -S warning scripts/*.sh .github/ci/*.sh icp-site/deploy/*.sh
+
+  # 临时 ICP 站:服务器上没有构建链,上线的是提交进仓库的 icp-site/dist/。这里从源码重新构建,和提交的不一致就失败
+  # (改了 src/ 忘了 npm run build,或手改了 dist/),再对构建出的 dist/server.mjs 跑接口测试。
+  icp-site:
+    name: icp-site (build reproducible + API test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: icp-site
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: icp-site/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: dist/ matches the committed build
+        run: |
+          git status --porcelain --untracked-files=all -- dist
+          git diff --stat --exit-code -- dist
+          test -z "$(git status --porcelain --untracked-files=all -- dist)"
+      - run: npm test
 
   # ---- 合并即上线:main 上检查全部通过后,把 deploy/main 移到这个提交。
   # 服务器上的 scripts/deploy-site.sh(cron 每 2 分钟)看到它变新就快进上线。只往前移(普通推送,不 --force),
   # 重跑一次旧的 CI 不会把线上换回旧版本。恢复后想立刻上线:Actions 里对 main 手动 Run workflow,或合并下一个 PR。
   mark-deployable:
     name: mark deployable (deploy/main)
-    needs: [server-sim, site]
+    needs: [server-sim, site, icp-site]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && vars.AUTO_DEPLOY != 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 5

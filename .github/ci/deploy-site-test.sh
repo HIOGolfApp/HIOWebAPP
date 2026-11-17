@@ -33,20 +33,22 @@ head_at()  { [ "$(git -C "$SITE" rev-parse HEAD)" = "$(git -C "$DEV" rev-parse "
 conf_at()  { git -C "$DEV" show "$1:$CONF_REL" | cmp -s - "$CONF"; }
 notices()  { local n; n=$(grep -c '^@@@$' /tmp/ci-notices 2> /dev/null); echo "${n:-0}"; }
 reloads()  { cat /tmp/ci-reloads 2> /dev/null | wc -l; }
-header()   { curl -sk -I --resolve "$W:443:127.0.0.1" "https://$W/" | tr -d '\r' | sed -n "s/^$1: //Ip"; }
-served()   { curl -sk --resolve "$W:443:127.0.0.1" "https://$W/" | grep -qF -- "$1"; }
+# privacy.html 而不是首页:ICP 审核期间首页是 icp-site 的(location = / 有自己的 add_header,不继承 X-CI-Rev)
+header()   { curl -sk -I --resolve "$W:443:127.0.0.1" "https://$W/privacy.html" | tr -d '\r' | sed -n "s/^$1: //Ip"; }
+served()   { curl -sk --resolve "$W:443:127.0.0.1" "https://$W/privacy.html" | grep -qF -- "$1"; }
 eq()       { [ "$1" = "$2" ]; }
 # DEV 上改点东西、提交、推 main(CI 还没跑:deploy/main 不动)
 commit()   { local msg=$1; shift; ( cd "$DEV" && "$@" ) && git -C "$DEV" commit -qam "$msg" && git -C "$DEV" tag "$msg" && git -C "$DEV" push -q "$GH" main; }
 mark()     { git -C "$DEV" push -q "$GH" HEAD:refs/heads/deploy/main; }   # = CI 的 mark-deployable
-page()     { echo "<!-- ci $1 -->" >> index.html; }
+page()     { echo "<!-- ci $1 -->" >> privacy.html; }
+icp_restarts() { cat /tmp/ci-icp-restarts 2> /dev/null | wc -l; }
 hdr()      { sed -i "s/^\(    add_header X-CI-Rev\).*/\1 $1;/" "$CONF_REL"; }   # www 块里的测试响应头,验证真 reload 了
 title()    { echo; echo "== $*"; }
 
 # ---- 假 GitHub + 服务器 ----------------------------------------------------------------------
 nginx -s stop 2> /dev/null && sleep 1
 set -e
-rm -rf "$SITE" "$GH" "$DEV" "$STATE" /tmp/ci-notices /tmp/ci-reloads /etc/nginx/private.d /etc/nginx/conf.d/zz-broken.conf
+rm -rf "$SITE" "$GH" "$DEV" "$STATE" /tmp/ci-notices /tmp/ci-reloads /tmp/ci-icp-* /etc/nginx/private.d /etc/nginx/conf.d/zz-broken.conf
 cp /opt/ci/aigolf-ratelimit.conf /etc/nginx/conf.d/aigolf-ratelimit.conf
 crontab -r 2> /dev/null || true
 mkdir -p "$DEV"
@@ -221,6 +223,19 @@ mark; run
 check "deployed cleanly by the old copy" eval '[ "$RC" = 0 ] && has "已上线" && head_at c14 && ! has "syntax error" && ! has "command not found"'
 run
 check "new copy runs: silent" silent
+
+title "temporary ICP site (icp-site/): Node service restarted when dist/server.mjs changes, stopped when it is removed"
+commit c15 eval 'echo "// ci c15" >> icp-site/dist/server.mjs'; mark; run
+check "service not installed yet: deployed, systemctl untouched" eval 'head_at c15 && [ "$(icp_restarts)" = 0 ] && ! has hio-icp-site'
+touch /tmp/ci-icp-enabled   # = install.sh 跑过
+commit c16 page c16; mark; run
+check "static-only change: no restart" eval 'head_at c16 && served "ci c16" && [ "$(icp_restarts)" = 0 ]'
+commit c17 eval 'echo "// ci c17" >> icp-site/dist/server.mjs'; mark; run
+check "server.mjs changed: restarted once" eval 'head_at c17 && has "已重启 hio-icp-site" && [ "$(icp_restarts)" = 1 ]'
+run
+check "next round silent, no extra restart" eval 'silent && [ "$(icp_restarts)" = 1 ]'
+commit c18 eval 'git rm -rq icp-site'; mark; run
+check "icp-site removed (rollback): service stopped + disabled" eval 'head_at c18 && has "已停止并禁用" && [ ! -e /tmp/ci-icp-enabled ] && [ "$(tail -1 /tmp/ci-icp-restarts)" = disable ]'
 
 title "--install / --uninstall (cron)"
 printf '%s\n' '30 3 * * * /opt/ai-golf/scripts/backup-db.sh >> /var/log/aigolf-backup.log 2>&1' \
