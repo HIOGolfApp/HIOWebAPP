@@ -45,9 +45,10 @@ node_ok() {   # $1 = node 可执行文件:>= 22.13 且 node:sqlite 能用
 
 find_node() {
   local c
-  for c in "$NODE_DIR/bin/node" "$(command -v node 2> /dev/null || true)"; do
-    [ -n "$c" ] && node_ok "$c" && { echo "$c"; return 0; }
-  done
+  [ -x "$NODE_DIR/bin/node" ] && node_ok "$NODE_DIR/bin/node" && { echo "$NODE_DIR/bin/node"; return 0; }
+  # 系统 node 只认 /usr 下的:服务看不见 /opt(见 hio-icp-site.service),装在 /opt 别处的 node 进去后就没了
+  c=$(readlink -f "$(command -v node 2> /dev/null || echo /nonexistent)" 2> /dev/null || true)
+  case "$c" in /usr/*) node_ok "$c" && { echo "$c"; return 0; } ;; esac
   return 1
 }
 

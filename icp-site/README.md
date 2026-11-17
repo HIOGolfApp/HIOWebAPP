@@ -12,8 +12,22 @@ AASA(Universal Links)、`privacy.html` / `terms.html`、`/img/`、`/public-api/`
 |---|---|
 | 前端 | 原版页面组件不改,`web/main.tsx` 挂成静态单页,`vite build` 出 `dist/client/`,nginx 直接提供(`/`、`/icp-assets/`、`/images/`、`/image-sources.html`) |
 | 接口 | 原版 `src/app/api/*/route.ts` 基本不改,`build-server.mjs`(esbuild)打成**一个文件** `dist/server.mjs`;`cloudflare:workers` / `next/headers` 换成 `server/shims/*`,D1 换成 Node 内置 `node:sqlite` 上的兼容层(`server/d1.ts`)。运行时**不需要 node_modules**,只要 Node ≥ 22.13 |
-| 服务 | systemd 服务 `hio-icp-site`,用户 `hio-icp`,只听 `127.0.0.1:3100`;nginx 把 `/api/` 反代过来,并限流(`icp_auth` 管登录 / 注册 / 验证码) |
+| 服务 | systemd 服务 `hio-icp-site`,用户 `hio-icp`,只听 `127.0.0.1:3100`,文件系统隔离 + 资源上限(见下节);nginx 把 `/api/` 反代过来,并限流(`icp_auth` 管登录 / 注册 / 验证码) |
 | 数据 | SQLite `/var/lib/hio-icp-site/site.db`(启动时自动跑 `src/drizzle/*.sql` 迁移);会员收款码 `/etc/hio-icp-site/member-payment-qr.png` |
+
+## 对现有系统和数据的影响
+
+- **不碰现有数据**:临时站只调用它自己的 `/api/`,不调用后端接口,代码里没有后端数据库的连接信息;它的数据是单独一个 SQLite 文件。
+  App / 小程序用户、球场、成绩等数据和它完全无关。
+- **被攻破也碰不到别的**(`deploy/hio-icp-site.service`,已在 systemd 239 = TencentOS 3 同版本上实测):以无登录权限的 `hio-icp`
+  用户运行,整个文件系统只读(只能写 `/var/lib/hio-icp-site`);看不见 `/opt` 下的其它服务(后端 `/opt/ai-golf` 及其 `.env`、CRM 等)、
+  `/var/lib` 下其它服务的数据、`/var/log`、`/etc/nginx`(证书私钥)、`/root`。实测:不加隔离时这个用户能读到权限宽松的 `.env`
+  和证书私钥,加了之后全部读不到。
+- **不抢后端资源**:最多半个 CPU、300 MB 内存、64 个线程;接口在 nginx 层按 IP 限流,用的是自己的限流 zone,不影响 App 接口的限流。
+- **共用的只有 nginx**:新配置只在 www.hiogolf.cn 里加 location,`api.hiogolf.cn` 的配置文件不动;上线时 `deploy-site.sh` 先
+  `nginx -t`,不过就恢复原文件,CI 也在 nginx 1.14 上跑全套路由测试。
+- **新增的责任**:网站上注册 / 申请的人留下的邮箱、称呼、手机(会员申请)是新的个人信息,存在服务器 `/var/lib/hio-icp-site/site.db`
+  (目录 700),归我们保管;ICP 办完回滚时决定删还是留存。
 
 服务器上没有构建链,所以 `dist/` 随仓库提交;CI 的 `icp-site` job 每次从源码重新构建,和提交的 `dist/` 不一致就失败。
 
@@ -49,7 +63,9 @@ AASA(Universal Links)、`privacy.html` / `terms.html`、`/img/`、`/public-api/`
    ```
 
    找 Node ≥ 22.13(系统没有就把官方二进制解到 `/opt/hio-icp-node`,不动系统 node),建用户和目录、装收款码、建库、装并启动 `hio-icp-site`,最后用 curl 验证。可重复执行。
-3. 创建后台管理员(提示输入密码;网站「登录 / 注册」用这个邮箱密码登录,会员中心出现「进入管理后台」):
+3. (建议)创建后台管理员。不建也能正常浏览、注册、发布,只是没人能审核:用户发的信息一直「待审核」、会员申请没法开通,
+   审核人员如果要看「信息发布审核机制」就演示不了。用一个只用于这里的强密码(提示输入;网站「登录 / 注册」用这个邮箱密码登录,
+   会员中心出现「进入管理后台」):
 
    ```bash
    bash /opt/hio-website/icp-site/deploy/icp-admin.sh create-admin 你的邮箱
