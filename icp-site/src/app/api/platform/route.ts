@@ -1,25 +1,24 @@
-import { getSiteUser } from '../../../lib/site-user';
+import { getSiteUser,isAdmin } from '../../../lib/site-user';
 import {entitlement} from '../../../lib/membership';
 import { getDb } from '../../../db';
 import { applications,audit,favorites,posts } from '../../../db/schema';
 import { and,eq,desc } from 'drizzle-orm';
-import { env } from 'cloudflare:workers';
 export const dynamic='force-dynamic';
 const json=(v:unknown,s=200)=>Response.json(v,{status:s,headers:{'Cache-Control':'private, no-store'}});
 export async function GET(req:Request){try{
  const u=await getSiteUser(); const db=getDb(); const url=new URL(req.url); const action=url.searchParams.get('action');
- const admin=!!u && !u.local && !!env.ADMIN_EMAIL && u.email.toLowerCase()===String(env.ADMIN_EMAIL).toLowerCase();
+ const admin=isAdmin(u);
  const mine=u?await db.select().from(applications).where(eq(applications.userId,u.userId)).orderBy(desc(applications.created)):[];
  const quota=u?await entitlement(u.userId):null;const active=!!quota?.active;
  if(action==='article')return json({error:'该栏目已下线，请前往信息广场。'},410);
  if(action==='admin'){if(!admin)return json({error:'无管理权限，请使用已配置的管理员账号登录。'},403);return json({applications:await db.select().from(applications).orderBy(desc(applications.created)),posts:await db.select().from(posts),audit:await db.select().from(audit).orderBy(desc(audit.id)).limit(100)});}
- return json({user:u?{email:u.email,name:u.displayName,kind:u.local?'account':'native-admin'}:null,admin,active,quota,applications:mine.map(({evidence,...a})=>({...a,status:a.status==='approved'&&!evidence?'needs_review':a.status})),favorites:u?(await db.select().from(favorites).where(eq(favorites.userId,u.userId))).map(f=>f.article):[],articles:[]});
+ return json({user:u?{email:u.email,name:u.displayName,kind:'account'}:null,admin,active,quota,applications:mine.map(({evidence,...a})=>({...a,status:a.status==='approved'&&!evidence?'needs_review':a.status})),favorites:u?(await db.select().from(favorites).where(eq(favorites.userId,u.userId))).map(f=>f.article):[],articles:[]});
  }catch(e){console.error(e);return json({error:'服务暂时不可用，请稍后重试。'},503);}}
 export async function POST(req:Request){try{
  if(req.headers.get('origin')!==new URL(req.url).origin)return json({error:'请求来源无效'},403);
  const u=await getSiteUser();if(!u)return json({error:'请先登录'},401);
  const b:any=await req.json(); const db=getDb();const now=new Date().toISOString();
- const admin=!u.local&&!!env.ADMIN_EMAIL&&u.email.toLowerCase()===String(env.ADMIN_EMAIL).toLowerCase();
+ const admin=isAdmin(u);
  if(b.action==='apply'){
  if(!['vip','svip'].includes(b.tier))return json({error:'请选择申请套餐'},400);
  if(b.consent!==true||typeof b.name!=='string'||b.name.trim().length<2||b.name.length>50||!/^1[3-9]\d{9}$/.test(b.phone||''))return json({error:'请填写姓名、有效手机号并同意协议。'},400);

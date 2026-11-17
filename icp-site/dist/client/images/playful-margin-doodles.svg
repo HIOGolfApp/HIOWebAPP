@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1120" viewBox="0 0 1440 1120" fill="none">
+  <!-- Original decorative strokes: no provider imagery or business information. -->
+  <g stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+    <g stroke="#7da99b" opacity=".38">
+      <path d="M20 92c26-31 49-17 35 4s-37 6-21-14M27 116l9 8"/>
+      <circle cx="695" cy="74" r="27"/><path d="M682 66h1m12-7h1m11 8h1m-25 12h1m14 7h1m11-9h1" stroke-width="3"/>
+      <path d="M1374 416c-20 0-26 21-11 27s27-10 17-19m-12 32 17 9"/>
+      <path d="M29 862v17m-8-8h16M1395 1004v17m-8-8h16"/>
+    </g>
+    <g stroke="#d7a15f" opacity=".42">
+      <path d="m1377 117 4 12 12 4-12 4-4 12-4-12-12-4 12-4zM54 556l4 10 11 3-11 4-4 11-4-11-10-4 10-3z"/>
+      <path d="m694 383 6-12m4 19 12-3m-27-11-5-8M1354 798l7-12m2 22 13-3"/>
+      <path d="M671 1070c21-23 47-22 68-2" stroke-dasharray="3 7"/>
+    </g>
+    <g stroke="#ac97c4" opacity=".35">
+      <path d="M20 284q10-14 20 0t20 0M1378 618q9-14 18 0t18 0M22 1053q10-14 20 0t20 0"/>
+      <circle cx="1391" cy="276" r="9"/><circle cx="38" cy="731" r="12"/>
+      <path d="m720 633 5 9-10 0z"/>
+    </g>
+  </g>
+  <g fill="#8eafa0" opacity=".35"><circle cx="22" cy="420" r="2"/><circle cx="34" cy="420" r="2"/><circle cx="46" cy="420" r="2"/><circle cx="22" cy="432" r="2"/><circle cx="34" cy="432" r="2"/><circle cx="46" cy="432" r="2"/><circle cx="1382" cy="934" r="2"/><circle cx="1394" cy="934" r="2"/><circle cx="1406" cy="934" r="2"/><circle cx="1382" cy="946" r="2"/><circle cx="1394" cy="946" r="2"/><circle cx="1406" cy="946" r="2"/></g>
+</svg>
