@@ -93,7 +93,8 @@ grep -q '"error":"服务暂时不可用' "$BODY" && ok "  ...with a JSON error t
 API_DB=$(mktemp -d)
 ICP_DB_PATH=$API_DB/site.db ICP_PAYMENT_QR=$API_DB/none.png /opt/hio-icp-node/bin/node --no-warnings "$SITE/icp-site/dist/server.mjs" > "$API_DB/log" 2>&1 &
 API_PID=$!
-trap 'kill $API_PID 2> /dev/null; nginx -s stop 2> /dev/null || true' EXIT
+# set -e 在 trap 里也生效:服务已经停了时 kill 会失败,必须 || true,否则全部通过也以 1 退出
+trap 'kill "$API_PID" 2> /dev/null || true; nginx -s stop 2> /dev/null || true' EXIT
 for _ in $(seq 1 40); do curl -s -o /dev/null http://127.0.0.1:3100/api/platform && break; sleep 0.25; done
 post() {   # post <path> <origin> <json> -> "code";body 在 $BODY,响应头在 /tmp/ci-hdr
   curl -sk -D /tmp/ci-hdr -o "$BODY" -w '%{http_code}' --resolve "$W:443:127.0.0.1" -H 'Content-Type: application/json' \
@@ -122,7 +123,7 @@ if [ -n "$got429" ] && grep -q '"error":"请求过于频繁' "$BODY" && grep -qi
   ok "icp_auth limit on /api/account -> 429 JSON"
 else bad "icp_auth 429 (got ${r}: $(head -c 200 "$BODY"))"; fi
 expect https $W /api/platform 200 application/json   # 其余接口不受 icp_auth 影响
-kill $API_PID 2> /dev/null; wait $API_PID 2> /dev/null
+kill "$API_PID" 2> /dev/null || true; wait "$API_PID" 2> /dev/null || true
 grep -iE 'error|exception' "$API_DB/log" | grep -v 'ExperimentalWarning' && bad "Node service logged errors (above)" || ok "Node service log clean"
 rm -rf "$API_DB"
 
