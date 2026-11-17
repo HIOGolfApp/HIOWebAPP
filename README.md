@@ -16,6 +16,9 @@
 
 官网用于介绍产品功能与**球场数据覆盖**：哪些球场支持 GPS 测距、哪些具备逐洞逐 Tee 台的距离数据。全国数百家经人工清洗核实的球场，目录持续扩充；具体数字由接口实时提供，页面上不写死。
 
+> **临时(办 ICP 经营许可证期间)**:www.hiogolf.cn 首页换成了代办做的「小白球科技 · 佛山本地服务信息平台」,源码、部署、回滚见
+> [`icp-site/README.md`](icp-site/README.md)。只换首页及其 `/api/`、`/icp-assets/`、`/images/`;落地页、AASA、隐私政策、`/img/`、`/public-api/` 不变。
+
 ## 本仓库
 
 官网本体是**纯静态页面**（零构建链、零外部 CDN，国内加载友好），配套 nginx 站点配置。服务器上的站点根目录就是本仓库的 checkout，所以 nginx 对仓库内部文件一律返回 404（见下文）。
@@ -31,6 +34,7 @@
 | `nginx/hiogolf-site.conf` | nginx 站点配置：静态服务、落地页路由、仓库文件封禁、裸域 301、数据接口同源反代（`/public-api/`） |
 | `scripts/deploy-site.sh` / `scripts/deploy.sh` | 服务器端自动上线（cron）/ 运维机手动触发一轮，见「部署」 |
 | `.github/workflows/ci.yml`、`.github/ci/` | CI：nginx 1.14 校验与路由冒烟、deploy-site.sh 场景测试、链接检查；通过后移动 `deploy/main` |
+| `icp-site/` | **临时**:ICP 审核用的信息平台(前端静态构建 + 本机 Node/SQLite 接口服务 `hio-icp-site`),办完 revert |
 
 ### 实时数据
 

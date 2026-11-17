@@ -53,8 +53,8 @@ expect() {   # <scheme> <host> <path> <code> [file 内容要等于 | 301 的跳�
 }
 
 W=www.hiogolf.cn; B=hiogolf.cn
+ICP=/icp-site/dist/client
 echo "== www pages and landing routes"
-expect https $W / 200 /index.html
 for p in privacy.html privacy-en.html terms.html robots.txt sitemap.xml favicon.svg img/miniprogram-qr.jpg; do
   expect https $W "/$p" 200 "/$p"
 done
@@ -67,6 +67,65 @@ expect https $W /g/7/Xy9 200 /round.html
 expect https $W /c/K2Z9 200 /caddie.html
 expect https $W /m/abc 404
 expect https $W /no-such-page 404
+
+echo "== 临时 ICP 站(icp-site):首页 + 静态文件来自 $ICP,/api/ 反代到本机 Node 服务"
+expect https $W / 200 "$ICP/index.html"
+expect https $W /index.html 301
+r=$(curl -sk -D /tmp/ci-hdr -o /dev/null --resolve "$W:443:127.0.0.1" "https://$W/")
+grep -qi "^Content-Security-Policy: default-src 'self'" /tmp/ci-hdr && grep -qi '^X-Frame-Options: SAMEORIGIN' /tmp/ci-hdr \
+  && ok "/ has CSP + X-Frame-Options" || bad "/ security headers missing: $(tr -d '\r' < /tmp/ci-hdr | grep -iE 'content-security|frame-options')"
+JS=$(grep -o '/icp-assets/[^"]*\.js' "$SITE$ICP/index.html" | head -1)
+CSS=$(grep -o '/icp-assets/[^"]*\.css' "$SITE$ICP/index.html" | head -1)
+[ -n "$JS" ] && [ -n "$CSS" ] || bad "no /icp-assets/ js+css in $ICP/index.html"
+for p in "$JS" "$CSS" /images/verified-golf-2026.jpg /images/playful-margin-doodles.svg /images/xbq-favicon.svg /image-sources.html; do
+  expect https $W "$p" 200 "$ICP$p"
+done
+expect https $W /images/no-such.jpg 404
+for h in $W $B; do
+  for p in /icp-site/ /icp-site/README.md /icp-site/dist/server.mjs /icp-site/src/lib/site-user.ts /icp-site/dist/client/index.html \
+           /icp-site/deploy/install.sh /icp-site/package.json; do
+    expect https $h "$p" 404
+  done
+done
+expect https $W /api/platform 503 application/json   # 服务没起:nginx 自己回 JSON(前端读 .error)
+grep -q '"error":"服务暂时不可用' "$BODY" && ok "  ...with a JSON error the page can show" || bad "/api/ down page: $(head -c 200 "$BODY")"
+
+API_DB=$(mktemp -d)
+ICP_DB_PATH=$API_DB/site.db ICP_PAYMENT_QR=$API_DB/none.png /opt/hio-icp-node/bin/node --no-warnings "$SITE/icp-site/dist/server.mjs" > "$API_DB/log" 2>&1 &
+API_PID=$!
+# set -e 在 trap 里也生效:服务已经停了时 kill 会失败,必须 || true,否则全部通过也以 1 退出
+trap 'kill "$API_PID" 2> /dev/null || true; nginx -s stop 2> /dev/null || true' EXIT
+for _ in $(seq 1 40); do curl -s -o /dev/null http://127.0.0.1:3100/api/platform && break; sleep 0.25; done
+post() {   # post <path> <origin> <json> -> "code";body 在 $BODY,响应头在 /tmp/ci-hdr
+  curl -sk -D /tmp/ci-hdr -o "$BODY" -w '%{http_code}' --resolve "$W:443:127.0.0.1" -H 'Content-Type: application/json' \
+    ${2:+-H "Origin: $2"} --data "$3" "https://$W$1" || true
+}
+expect https $W /api/platform 200 application/json
+grep -q '"user":null' "$BODY" && ok "  ...served by the Node service" || bad "/api/platform body: $(head -c 200 "$BODY")"
+r=$(post /api/account "https://$W" '{"action":"logout"}')
+[ "$r" = 200 ] && grep -qi '^Set-Cookie: xbq_session=;.*Secure' /tmp/ci-hdr \
+  && ok "same-origin POST through nginx accepted, cookie Secure (Host + X-Forwarded-Proto reach the service)" \
+  || bad "same-origin POST via nginx (got $r: $(head -c 200 "$BODY"); $(grep -i set-cookie /tmp/ci-hdr))"
+r=$(post /api/account https://evil.example '{"action":"logout"}')
+[ "$r" = 403 ] && ok "cross-site POST -> 403" || bad "cross-site POST (got $r)"
+r=$(curl -sk -o "$BODY" -w '%{http_code}' --resolve "$W:443:127.0.0.1" -H 'oai-authenticated-user-id: x' \
+    -H 'oai-authenticated-user-email: admin@example.com' "https://$W/api/platform?action=admin" || true)
+[ "$r" = 403 ] && ok "forged oai-authenticated-user-* headers are not admin" || bad "forged admin headers (got $r)"
+r=$(post /api/information "https://$W" "$(head -c 70000 /dev/zero | tr '\0' x)")
+[ "$r" = 413 ] && grep -q '"error"' "$BODY" && ok "70 KB body -> 413 JSON" || bad "oversized body (got $r: $(head -c 100 "$BODY"))"
+expect https $W /api/member-payment-qr 401 application/json
+got429=
+for _ in $(seq 1 15); do
+  r=$(curl -sk -D /tmp/ci-hdr -o "$BODY" -w '%{http_code}' --resolve "$W:443:127.0.0.1" "https://$W/api/account?action=captcha" || true)
+  [ "$r" = 429 ] && { got429=1; break; }
+done
+if [ -n "$got429" ] && grep -q '"error":"请求过于频繁' "$BODY" && grep -qi '^Retry-After: 10' /tmp/ci-hdr; then
+  ok "icp_auth limit on /api/account -> 429 JSON"
+else bad "icp_auth 429 (got ${r}: $(head -c 200 "$BODY"))"; fi
+expect https $W /api/platform 200 application/json   # 其余接口不受 icp_auth 影响
+kill "$API_PID" 2> /dev/null || true; wait "$API_PID" 2> /dev/null || true
+grep -iE 'error|exception' "$API_DB/log" | grep -v 'ExperimentalWarning' && bad "Node service logged errors (above)" || ok "Node service log clean"
+rm -rf "$API_DB"
 
 echo "== AASA (Apple fetches it without following redirects: direct 200 + JSON on both hosts)"
 for h in $W $B; do
@@ -105,8 +164,8 @@ done
 if [ -n "$got429" ] && grep -q '"code":42990' "$BODY" && grep -qi '^Retry-After: 10' /tmp/ci-hdr && grep -qi '^Content-Type: application/json' /tmp/ci-hdr; then
   ok "hio_public limit -> 429 JSON (42990, Retry-After)"
 else bad "429 page (got ${r}: $(head -c 200 "$BODY"))"; fi
-[ "$(curl -sk -H 'Accept-Encoding: gzip' -o /dev/null -w '%{size_download}' --resolve "$W:443:127.0.0.1" "https://$W/")" -lt "$(wc -c < "$SITE/index.html")" ] \
-  && ok "gzip" || bad "index.html not gzipped"
+[ "$(curl -sk -H 'Accept-Encoding: gzip' -o /dev/null -w '%{size_download}' --resolve "$W:443:127.0.0.1" "https://$W/privacy.html")" -lt "$(wc -c < "$SITE/privacy.html")" ] \
+  && ok "gzip" || bad "privacy.html not gzipped"
 
 rm -rf /etc/nginx/private.d
 echo

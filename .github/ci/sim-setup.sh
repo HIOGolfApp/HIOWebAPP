@@ -5,7 +5,9 @@
 #   - /etc/nginx/conf.d/aigolf-upstream.conf    upstream aigolf_app,指向下面这个假后端
 #   - /etc/nginx/conf.d/zz-ci-backend-stub.conf 假后端:原样回显收到的 URI
 #   - /etc/nginx/ssl/hiogolf.cn*                自签证书
-#   - /usr/local/bin/systemctl                  容器里没有 systemd:reload nginx 换成 nginx -s reload,并计数
+#   - /usr/local/bin/systemctl                  容器里没有 systemd:reload nginx 换成 nginx -s reload,并计数;
+#                                               临时 ICP 站服务 hio-icp-site 的 is-enabled / restart / disable 记在 /tmp/ci-icp-*
+#   - /opt/hio-icp-node                         icp-site/deploy/install.sh --node-only 装的 Node(和服务器上同一条路径)
 #   - /opt/ci/notify-stub.sh                    代替后端的 lib-notify.sh:通知写进 /tmp/ci-notices
 # 用法(CI 和本地一样,本地在仓库根目录):
 #   docker run -d --name sim -v "$PWD:/src:ro" rockylinux:8 sleep infinity
@@ -18,7 +20,8 @@ set -euo pipefail
 if ! command -v nginx > /dev/null; then
   dnf -y -q module enable nginx:1.14
   # 服务器上 deploy-site.sh 用到的:git、flock(util-linux)、timeout / sha256sum(coreutils)、cmp(diffutils)、crontab(cronie)
-  dnf -y -q install nginx git-core cronie diffutils findutils openssl procps-ng util-linux > /dev/null
+  # xz:icp-site/deploy/install.sh 解 Node 官方 .tar.xz 用
+  dnf -y -q install nginx git-core cronie diffutils findutils openssl procps-ng util-linux xz > /dev/null
 fi
 nginx -v 2>&1 | grep -q 'nginx/1\.14\.' || { echo "expected nginx 1.14.x (the server runs 1.14.1), got: $(nginx -v 2>&1)"; exit 1; }
 echo "$(nginx -v 2>&1) / $(git --version) / $(flock --version | head -1)"
@@ -54,15 +57,24 @@ EOF
 
 cat > /usr/local/bin/systemctl <<'EOF'
 #!/bin/sh
-[ "$1 $2" = "reload nginx" ] || { echo "fake systemctl: unsupported: $*" >&2; exit 1; }
-echo reload >> /tmp/ci-reloads
-nginx -s reload
+case "$*" in
+  "reload nginx") echo reload >> /tmp/ci-reloads; nginx -s reload ;;
+  # 临时 ICP 站:/tmp/ci-icp-enabled 存在 = 服务已装(install.sh 跑过)
+  "is-enabled -q hio-icp-site") [ -e /tmp/ci-icp-enabled ] ;;
+  "restart hio-icp-site") echo restart >> /tmp/ci-icp-restarts ;;
+  "disable --now -q hio-icp-site") rm -f /tmp/ci-icp-enabled; echo disable >> /tmp/ci-icp-restarts ;;
+  *) echo "fake systemctl: unsupported: $*" >&2; exit 1 ;;
+esac
 EOF
 chmod +x /usr/local/bin/systemctl
 
 cat > /opt/ci/notify-stub.sh <<'EOF'
 send_notice() { printf '%s\n@@@\n' "$1" >> /tmp/ci-notices; }
 EOF
+
+# 临时 ICP 站的接口服务要 Node >= 22.13(node:sqlite);用服务器上同一个安装脚本装,顺便测它的下载 / 校验
+[ -x /opt/hio-icp-node/bin/node ] || bash /src/icp-site/deploy/install.sh --node-only
+/opt/hio-icp-node/bin/node --version
 
 nginx -t -q
 echo "sim ready"

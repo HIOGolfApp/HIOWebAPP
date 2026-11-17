@@ -201,6 +201,33 @@ $(tail -4 <<< "$out")"
   return 0
 }
 
+# 临时 ICP 站(icp-site/,见 icp-site/README.md):静态文件和官网一样快进即生效,但它的接口是常驻的 Node 服务
+# hio-icp-site,跑的是 icp-site/dist/server.mjs:这次快进改了它就重启服务;它被删掉了(ICP 办完、revert 了
+# icp-site 的 PR)就停掉并禁用服务(数据目录保留)。服务没装(还没跑 icp-site/deploy/install.sh)就什么都不做。
+# 回滚时跑的是旧版本脚本里的这段(快进前已读进内存),所以 revert 会把这段一起删掉也没关系。
+ICP_UNIT=hio-icp-site
+ICP_SERVER=icp-site/dist/server.mjs
+icp_site_service() {   # $1 = 快进前的提交
+  [ -n "$1" ] && [ "$1" != "$(g rev-parse -q --verify HEAD)" ] || return 0
+  g diff --quiet "$1" HEAD -- "$ICP_SERVER" 2> /dev/null && return 0
+  systemctl is-enabled -q "$ICP_UNIT" 2> /dev/null || return 0
+  if [ ! -f "$SITE_DIR/$ICP_SERVER" ]; then
+    if systemctl disable --now -q "$ICP_UNIT"; then
+      log "icp-site 已从仓库删除,已停止并禁用 $ICP_UNIT(数据在 /var/lib/hio-icp-site,确认不要了再删)"
+    else
+      log "ERROR: icp-site 已删除,但停止 $ICP_UNIT 失败(systemctl status $ICP_UNIT)"
+    fi
+  elif systemctl restart "$ICP_UNIT"; then
+    log "$ICP_SERVER 有更新,已重启 $ICP_UNIT"
+  else
+    log "ERROR: 重启 $ICP_UNIT 失败"
+    notify "**临时 ICP 站接口重启失败** $(short HEAD)
+> $(subject HEAD)
+$ICP_SERVER 有更新,但 systemctl restart $ICP_UNIT 失败。在服务器上看 \`systemctl status $ICP_UNIT\` / \`journalctl -u $ICP_UNIT -n 50\`。"
+  fi
+  return 0
+}
+
 cron_line() { echo "*/2 * * * * sleep 30; bash $SITE_DIR/scripts/deploy-site.sh >> $LOG 2>&1 $CRON_TAG"; }
 
 status() {
@@ -237,7 +264,7 @@ status() {
 }
 
 main() {
-  local RETRY=0 N T ERR RC
+  local RETRY=0 N T ERR RC H0
   mkdir -p "$STATE" || return 1
   case "${1:-}" in
     --install)
@@ -291,8 +318,10 @@ ${ERR:-git fetch 退出码 $RC}
   rm -f "$STATE/fetch-fail"; clear_notice fetch
 
   T=$(target) || return 0
+  H0=$(g rev-parse -q --verify HEAD)
   sync_checkout "$T" || return 0
   apply_nginx_conf
+  icp_site_service "$H0"
   return 0
 }
 

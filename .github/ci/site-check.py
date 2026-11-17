@@ -21,7 +21,8 @@ from urllib.parse import urlsplit
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SITE_HOSTS = {"www.hiogolf.cn", "hiogolf.cn"}
-SKIP_DIRS = {".git", ".github", ".claude", "scripts", "nginx", "docs", "node_modules"}
+# icp-site/: the temporary ICP site has its own root (icp-site/dist/client) and its own checks (ci.yml job icp-site)
+SKIP_DIRS = {".git", ".github", ".claude", "scripts", "nginx", "docs", "node_modules", "icp-site"}
 SKIP_SCHEMES = ("mailto:", "tel:", "sms:", "javascript:", "data:", "hiogolf:", "weixin:")
 # search-console verification files: not real pages
 VERIFICATION_PAGE = re.compile(r"^google[0-9a-f]+\.html$")

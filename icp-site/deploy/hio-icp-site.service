@@ -1,0 +1,45 @@
+# 模板:icp-site/deploy/install.sh 把 @NODE@ / @APP@ 换掉后装到 /etc/systemd/system/hio-icp-site.service
+[Unit]
+Description=HIO 官网临时 ICP 站接口 (icp-site, 127.0.0.1:3100)
+After=network.target
+
+[Service]
+Type=simple
+User=hio-icp
+Group=hio-icp
+Environment=NODE_ENV=production PORT=3100 HOST=127.0.0.1
+Environment=ICP_DB_PATH=/var/lib/hio-icp-site/site.db
+Environment=ICP_PAYMENT_QR=/etc/hio-icp-site/member-payment-qr.png
+ExecStart=@NODE@ --no-warnings @APP@/dist/server.mjs
+Restart=on-failure
+RestartSec=3
+# ---- 隔离:就算这个服务被攻破,也碰不到服务器上的其它东西 ----
+# 整个文件系统只读,只能写自己的数据目录
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/hio-icp-site
+# 看不见 /opt 下的其它服务(后端 /opt/ai-golf 及其 .env、CRM 等),只挂进来运行所需的两样
+TemporaryFileSystem=/opt:ro
+BindReadOnlyPaths=@APP@/dist
+BindReadOnlyPaths=-/opt/hio-icp-node
+# 看不见其它服务的数据和日志(/var/lib 下的数据库等、nginx 访问日志)、nginx 证书私钥
+TemporaryFileSystem=/var/lib:ro
+BindPaths=/var/lib/hio-icp-site
+InaccessiblePaths=-/var/log -/etc/nginx -/etc/pki/tls/private -/etc/ssl/private
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# 和后端同机:最多用半个 CPU、300 MB 内存,被刷也拖不垮后端
+CPUQuota=50%
+MemoryLimit=300M
+MemoryMax=300M
+TasksMax=64
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target
